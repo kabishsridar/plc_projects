@@ -1,0 +1,8 @@
+*.opt
+*.backup
+*.lock
+*.precompilecache
+*.simulation.bootinfo*
+*.simulation.bootinfo_guids*
+*.simulation.compileinfo*
+*_Recovered.project
