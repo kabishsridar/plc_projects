@@ -1,0 +1,89 @@
+# AC500 V3 Batching System Variable & Array Reference
+
+This document explains the function of all major arrays and variables configured in **`batching9`** and its sub-blocks (`Auto_Batching_V9`, `Manual_Batching_V9`).
+
+---
+
+## 1. Global Variables (GVL)
+
+*   **`GVL.Recipe_Weights : ARRAY[1..20] OF REAL`**
+    *   *Description:* Global recipe targets. Holds the raw target weight setpoint (in kg) for up to 20 different materials. 
+
+---
+
+## 2. Program Level Variables (`batching9`)
+
+These variables govern the parallel orchestration, configuration parameters, and main HMI/diagnostic mappings:
+
+### Control & Status Toggles
+*   **`Start_Button : BOOL`**
+    *   *Description:* The main process start button. Toggled `TRUE` to start the batch sequence. Once the batch is complete, release (`FALSE`) to reset and prepare for the next run.
+*   **`E_Stop_Active : BOOL`**
+    *   *Description:* Emergency Stop active input. When `TRUE`, immediately shuts off all outputs and forces sequences into a safe abort state.
+*   **`Sequence_Complete : BOOL`**
+    *   *Description:* Becomes `TRUE` when both the automatic sequence and manual sequence have completed all active steps.
+*   **`Error_Code : INT`**
+    *   *Description:* Main system diagnostic indicator. Represents active startup or runtime error IDs (e.g. `1` for duplicates, `21` for overload).
+*   **`Status_Message : STRING`**
+    *   *Description:* Text status message displayed on HMI panels showing process state or error details.
+
+### Scale Inputs
+*   **`load_cell_auto : REAL`**
+    *   *Description:* Cumulative scale weight feedback (in kg) for the automated batching system.
+*   **`load_cell_manual : REAL`**
+    *   *Description:* Cumulative scale weight feedback (in kg) for the manual operator batching system.
+
+### Silo Material Mapping
+*   **`Auto_Bin_Material_Mapping : ARRAY[1..6] OF INT`**
+    *   *Description:* Maps physical Auto Silos `1..6` to GVL Material IDs `1..20`. A value of `0` tells the sequencer to skip that silo.
+*   **`Manual_Bin_Material_Mapping : ARRAY[1..10] OF INT`**
+    *   *Description:* Maps physical Manual Silos `7..16` to GVL Material IDs `1..20`. A value of `0` tells the sequencer to skip that silo.
+
+### Cutoff & Tolerance Configurations
+*   **`Auto_Bin_Cutoff_Weights : ARRAY[1..6] OF REAL`**
+    *   *Description:* Pre-cutoff weight offset margins (in kg) for the 6 Auto silos. (e.g. `2.0` kg offset on a `50.0` kg target triggers fine feed at `48.0` kg).
+*   **`Manual_Bin_Cutoff_Weights : ARRAY[1..10] OF REAL`**
+    *   *Description:* Pre-cutoff weight offset margins (in kg) for the 10 Manual silos.
+*   **`Auto_Bin_Tolerance : ARRAY[1..6] OF REAL`**
+    *   *Description:* Tolerance weight offset margins (in kg) for the 6 Auto silos. Subtracted from target to prevent overshoot due to material in-flight after feeder shuts down.
+*   **`Manual_Bin_Tolerance : ARRAY[1..10] OF REAL`**
+    *   *Description:* Tolerance weight offset margins (in kg) for the 10 Manual silos.
+
+### Control Outputs
+*   **`Auto_Bin : ARRAY[1..6] OF BOOL`**
+    *   *Description:* Coarse feed control valve outputs for Auto silos.
+*   **`auto_bin_cutoff : ARRAY[1..6] OF BOOL`**
+    *   *Description:* Fine feed control valve outputs for Auto silos.
+*   **`auto_bin_motor : ARRAY[1..6] OF BOOL`**
+    *   *Description:* Feeder/conveyor motor outputs running during active Auto bin cycles.
+*   **`Manual_Bin : ARRAY[1..10] OF BOOL`**
+    *   *Description:* Coarse prompt indicators for Manual silos.
+*   **`manual_bin_cutoff : ARRAY[1..10] OF BOOL`**
+    *   *Description:* Fine prompt indicators for Manual silos.
+*   **`manual_bin_motor : ARRAY[1..10] OF BOOL`**
+    *   *Description:* Feeder/conveyor motor outputs running during active Manual bin cycles.
+
+### Dynamic Step Monitors
+*   **`Auto_Active_Mat` / `Manual_Active_Mat` (INT)**
+    *   *Description:* Material ID currently being processed in the active sequence step.
+*   **`Auto_Active_Bin` / `Manual_Active_Bin` (INT)**
+    *   *Description:* Physical Silo ID currently being processed in the active sequence step.
+*   **`Auto_Active_Target` / `Manual_Active_Target` (REAL)**
+    *   *Description:* Displays the effective target weight of the active bin (calculated as GVL Target Weight minus Tolerance).
+
+---
+
+## 3. Function Block Internal Variables (`Auto_Batching_V9` & `Manual_Batching_V9`)
+
+*   **`Step : INT`**
+    *   *Description:* Current active state in the state machine (e.g. `0` = Idle, `1..6` = Active discharge, `11..16` = Settling delays, `99` = Aborted).
+*   **`bin_last_weight : REAL`**
+    *   *Description:* Scale weight snapshot (baseline) captured right before starting the current step.
+*   **`actual_bin : REAL`**
+    *   *Description:* Poured weight added during the current step, calculated as `load_cell_value - bin_last_weight`.
+*   **`target_act_bin : REAL`**
+    *   *Description:* Effective target weight calculated for the active step: `bin_set_value - Tolerance`.
+*   **`cutoff_trigger_weight : REAL`**
+    *   *Description:* The weight at which the system transitions from Coarse to Fine feed, calculated as: `bin_set_value - Tolerance - Cutoff_Weight`.
+*   **`Transition_Timer : TON` / `Completion_Timer : TON`**
+    *   *Description:* Standard CODESYS timers governing inter-step transition delays (2 seconds) and scale settling delays (2 seconds).
