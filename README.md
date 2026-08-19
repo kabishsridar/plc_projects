@@ -19,7 +19,7 @@ This repository contains CODESYS project files implementing automatic and manual
 
 ---
 
-## Diagnostic Error Codes Reference (`batching8`)
+## Diagnostic Error Codes Reference (`batching9`)
 
 The system aggregates configuration and runtime faults into an integer `Error_Code` and displays corresponding HMI text in `Status_Message`.
 
@@ -38,6 +38,6 @@ The system aggregates configuration and runtime faults into an integer `Error_Co
 
 ### Abort Sequence Behavior
 If any error (`Error_Code > 0`) is detected during start or execution:
-1. All physical control outputs (e.g. `Auto_Bin[1..6]`) are forced **FALSE** immediately.
+1. All physical control outputs (e.g. `Auto_Bin[1..6]`, `auto_bin_cutoff[1..6]`, `auto_bin_motor[1..6]`, `Manual_Bin[1..10]`, `manual_bin_cutoff[1..10]`, `manual_bin_motor[1..10]`) are forced **FALSE** immediately.
 2. The sequence drops into state **`99`** (Error Abort state).
 3. The system remains locked until `Start_Button` is released (toggled `FALSE`), which resets the state machine back to `Step := 0` (Idle) once the error source is cleared.
