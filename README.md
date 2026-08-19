@@ -15,6 +15,7 @@ This repository contains CODESYS project files implementing automatic and manual
     *   `batching6` (PROGRAM): Calls both FBs concurrently.
 *   **`batching7`**: Adds cross-array distinct material verification, active material logging outputs, and active bin integer outputs.
 *   **`batching8`**: Integrates a comprehensive set of diagnostic error checks and device interlocks.
+*   **`batching9`**: Implements a three-stage feed sequence (Coarse Valve, Fine Cutoff, and main Conveyor Motor) with tolerance weight offset compensation configuration arrays (`Auto_Bin_Tolerance` and `Manual_Bin_Tolerance`) to offset in-flight overshoots.
 
 ---
 
