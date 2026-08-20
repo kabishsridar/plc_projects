@@ -16,10 +16,11 @@ This repository contains CODESYS project files implementing automatic and manual
 *   **`batching7`**: Adds cross-array distinct material verification, active material logging outputs, and active bin integer outputs.
 *   **`batching8`**: Integrates a comprehensive set of diagnostic error checks and device interlocks.
 *   **`batching9`**: Implements a three-stage feed sequence (Coarse Valve, Fine Cutoff, and main Conveyor Motor) with tolerance weight offset compensation configuration arrays (`Auto_Bin_Tolerance` and `Manual_Bin_Tolerance`) to offset in-flight overshoots.
+*   **`batching10`**: Implements repetitive batch cycle manager loop controls (`Target_Batch_Cycles`, `Completed_Batch_Cycles`, `All_Cycles_Complete`) enabling automatic sequence execution repetitions.
 
 ---
 
-## Diagnostic Error Codes Reference (`batching9`)
+## Diagnostic Error Codes Reference (`batching10`)
 
 The system aggregates configuration and runtime faults into an integer `Error_Code` and displays corresponding HMI text in `Status_Message`.
 

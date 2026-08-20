@@ -1,6 +1,6 @@
 # AC500 V3 Batching System Variable & Array Reference
 
-This document explains the function of all major arrays and variables configured in **`batching9`** and its sub-blocks (`Auto_Batching_V9`, `Manual_Batching_V9`).
+This document explains the function of all major arrays and variables configured in **`batching10`** and its sub-blocks (`Auto_Batching_V10`, `Manual_Batching_V10`).
 
 ---
 
@@ -11,17 +11,23 @@ This document explains the function of all major arrays and variables configured
 
 ---
 
-## 2. Program Level Variables (`batching9`)
+## 2. Program Level Variables (`batching10`)
 
 These variables govern the parallel orchestration, configuration parameters, and main HMI/diagnostic mappings:
 
 ### Control & Status Toggles
 *   **`Start_Button : BOOL`**
-    *   *Description:* The main process start button. Toggled `TRUE` to start the batch sequence. Once the batch is complete, release (`FALSE`) to reset and prepare for the next run.
+    *   *Description:* The main process start button. Toggled `TRUE` to start the batch sequence. Once all cycles are complete, release (`FALSE`) to reset and prepare for the next run.
 *   **`E_Stop_Active : BOOL`**
     *   *Description:* Emergency Stop active input. When `TRUE`, immediately shuts off all outputs and forces sequences into a safe abort state.
-*   **`Sequence_Complete : BOOL`**
-    *   *Description:* Becomes `TRUE` when both the automatic sequence and manual sequence have completed all active steps.
+*   **`Target_Batch_Cycles : INT`**
+    *   *Description:* Configured input for the number of consecutive batch loops to execute automatically (e.g. `2` runs the entire sequence twice).
+*   **`Current_Batch_Cycle : INT`**
+    *   *Description:* Status indicator showing the sequence cycle number currently running (e.g., cycle `1` or `2`).
+*   **`Completed_Batch_Cycles : INT`**
+    *   *Description:* Counter tracking how many full sequence loop cycles have successfully finished.
+*   **`All_Cycles_Complete : BOOL`**
+    *   *Description:* Status boolean. Becomes `TRUE` once the number of completed loops reaches `Target_Batch_Cycles`.
 *   **`Error_Code : INT`**
     *   *Description:* Main system diagnostic indicator. Represents active startup or runtime error IDs (e.g. `1` for duplicates, `21` for overload).
 *   **`Status_Message : STRING`**
@@ -73,7 +79,7 @@ These variables govern the parallel orchestration, configuration parameters, and
 
 ---
 
-## 3. Function Block Internal Variables (`Auto_Batching_V9` & `Manual_Batching_V9`)
+## 3. Function Block Internal Variables (`Auto_Batching_V10` & `Manual_Batching_V10`)
 
 *   **`Step : INT`**
     *   *Description:* Current active state in the state machine (e.g. `0` = Idle, `1..6` = Active discharge, `11..16` = Settling delays, `99` = Aborted).
