@@ -1,6 +1,6 @@
 # AC500 V3 Batching System Variable & Array Reference
 
-This document explains the function of all major arrays and variables configured in **`batching11`** and its sub-blocks (`Auto_Batching_V11`, `Semi_Auto_Batching_V11`).
+This document explains the function of all major arrays and variables configured in **`batching12`** and its sub-blocks (`Auto_Batching_V12`, `Semi_Auto_Batching_V12`).
 
 ---
 
@@ -8,10 +8,12 @@ This document explains the function of all major arrays and variables configured
 
 *   **`GVL.Recipe_Weights : ARRAY[1..20] OF REAL`**
     *   *Description:* Global recipe targets. Holds the raw target weight setpoint (in kg) for up to 20 different materials. 
+*   **`GVL.Run : BOOL`**
+    *   *Description:* Process running indicator. Automatically set `TRUE` when sequence is executing and toggles `FALSE` upon completion, resets, or startup error aborts.
 
 ---
 
-## 2. Program Level Variables (`batching11`)
+## 2. Program Level Variables (`batching12`)
 
 These variables govern the parallel orchestration, configuration parameters, and main HMI/diagnostic mappings:
 
@@ -83,7 +85,7 @@ These variables govern the parallel orchestration, configuration parameters, and
 
 ---
 
-## 3. Function Block Internal Variables (`Auto_Batching_V11` & `Semi_Auto_Batching_V11`)
+## 3. Function Block Internal Variables (`Auto_Batching_V12` & `Semi_Auto_Batching_V12`)
 
 *   **`Step : INT`**
     *   *Description:* Current active state in the state machine (e.g. `0` = Idle, `1..6` = Active discharge, `11..16` = Settling delays, `99` = Aborted).
