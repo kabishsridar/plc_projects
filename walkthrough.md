@@ -1,20 +1,28 @@
-# Walkthrough - Real-World PLC Sensor Integration & Simulation Disable
+# Walkthrough - Closed-Loop Tolerance Verification, Auto-Reset & Excess Alarms (batching13)
 
-I have successfully updated the project to map physical load cell sensors to GVL registers and disabled the internal software simulation mode across the state machines inside `Rasi_feeds_batching.project` and pushed it to GitHub.
+I have implemented **`batching13`** (including Function Blocks **`Auto_Batching_V13`**, **`Semi_Auto_Batching_V13`**, and the **`batching13`** PROGRAM) inside `Rasi_feeds_batching.project` and verified it compiles cleanly with **0 errors**.
 
-## Changes Made
+## Features Implemented in `batching13`
 
-1. **GVL-Mapped Load Cell Sensors**:
-   - Declared `load_cell_auto AT %MD170 : REAL;` and `load_cell_semi_auto AT %MD180 : REAL;` in the **`GVL`** variable list.
-   - Cleared local declarations from the `batching12` program block, passing the `GVL.load_cell_auto` and `GVL.load_cell_semi_auto` memory variables to the FBs.
-2. **Disabled Simulation Mode**:
-   - Changed the internal parameter `Simulation_Mode : BOOL := FALSE;` in both `Auto_Batching_V12` and `Semi_Auto_Batching_V12`. This stops software weights simulation timers, allowing the FBs to read and write weights directly based on physical load cell scale sensors.
-3. **Run Variable Overlap Resolve**:
-   - Relocated the mapped memory address of `GVL.Run` to `%MX1.4` (from `%MX1.2`) to prevent overlap conflicts with `Cycle_Hold_Active AT %MX1.2 : BOOL;`.
-4. **Compilation Verification**:
-   - Verified that the project builds successfully with **0 errors**.
+1. **Auto-Clearing Reset Trigger**:
+   - `GVL.Reset` executes an immediate zeroing of all actual weights, outputs, and diagnostic registers, then automatically resets itself back to `FALSE` (`GVL.Reset := FALSE;`) within the same scan cycle, operating as a clean one-shot trigger.
+2. **Tolerance Band Calculation**:
+   - Calculates `Min_Tol_Weight = Target - Tolerance` and `Max_Tol_Weight = Target + Tolerance`.
+3. **Global Inter-Bin Settling Delay**:
+   - Settles the scale using `GVL.Inter_Bin_Delay` (`%MD190`) between bin closures and weight verifications.
+4. **Closed-Loop Post-Settling Verification**:
+   - **In Tolerance Range**: Snapshot baseline weight and advance to next silo.
+   - **Underfilled**: Automatically re-engages fine feed feeder to top up until reaching the minimum tolerance threshold.
+   - **Excess/Overfilled**:
+     - If `GVL.Excess_Allowed = TRUE` (`%MX1.5`): logs bypass and proceeds to next silo.
+     - If `GVL.Excess_Allowed = FALSE`: sets `GVL.Auto_Excess_Alarm` (`%MX1.6`) or `GVL.Semi_Auto_Excess_Alarm` (`%MX1.7`) and **holds execution** until the material is scooped/reduced into the valid tolerance window.
+5. **Separate Alarms**:
+   - `GVL.Auto_Excess_Alarm` for Auto system.
+   - `GVL.Semi_Auto_Excess_Alarm` for Semi-Auto system.
 
-### Updated GVL Declarations
+---
+
+### GVL Variables Mapping (`batching13`)
 
 ```pascal
 {attribute 'qualified_only'}
@@ -40,5 +48,9 @@ VAR_GLOBAL
 	Run AT %MX1.4 : BOOL;
 	load_cell_auto AT %MD170 : REAL;
 	load_cell_semi_auto AT %MD180 : REAL;
+	Inter_Bin_Delay AT %MD190 : TIME;
+	Excess_Allowed AT %MX1.5 : BOOL;
+	Auto_Excess_Alarm AT %MX1.6 : BOOL;
+	Semi_Auto_Excess_Alarm AT %MX1.7 : BOOL;
 END_VAR
 ```

@@ -1,99 +1,60 @@
 # AC500 V3 Batching System Variable & Array Reference
 
-This document explains the function of all major arrays and variables configured in **`batching12`** and its sub-blocks (`Auto_Batching_V12`, `Semi_Auto_Batching_V12`).
+This document explains the function of all major arrays and variables configured in **`batching13`** and its sub-blocks (`Auto_Batching_V13`, `Semi_Auto_Batching_V13`).
 
 ---
 
 ## 1. Global Variables (GVL)
 
-*   **`GVL.Recipe_Weights : ARRAY[1..20] OF REAL`**
-    *   *Description:* Global recipe targets. Holds the raw target weight setpoint (in kg) for up to 20 different materials. 
-*   **`GVL.Run : BOOL`**
-    *   *Description:* Process running indicator. Automatically set `TRUE` when sequence is executing and toggles `FALSE` upon completion, resets, or startup error aborts.
-*   **`GVL.load_cell_auto : REAL`**
-    *   *Description:* Physical load cell weight feedback (in kg) for the automated batching system, mapped to `%MD170`.
-*   **`GVL.load_cell_semi_auto : REAL`**
-    *   *Description:* Physical load cell weight feedback (in kg) for the semi-automatic batching system, mapped to `%MD180`.
+*   **`GVL.Recipe_Weights : ARRAY[1..20] OF REAL`** (at `%MD100`)
+    *   *Description:* Holds raw target weight setpoints (in kg) for up to 20 ingredients.
+*   **`GVL.Auto_Bin_Material_Mapping : ARRAY[1..6] OF INT`** (at `%MW50`)
+    *   *Description:* Maps physical Auto Silos `1..6` to GVL Material IDs `1..20`. A value of `0` skips that silo.
+*   **`GVL.Semi_Auto_Bin_Material_Mapping : ARRAY[1..10] OF INT`** (at `%MW60`)
+    *   *Description:* Maps physical Semi-Auto Silos `7..16` to GVL Material IDs `1..20`. A value of `0` skips that silo.
+*   **`GVL.Auto_Bin_Cutoff_Weights : ARRAY[1..6] OF REAL`** (at `%MD120`)
+    *   *Description:* Pre-cutoff weight offsets (in kg) triggering transition from Coarse to Fine feed.
+*   **`GVL.Semi_Auto_Bin_Cutoff_Weights : ARRAY[1..10] OF REAL`** (at `%MD130`)
+    *   *Description:* Pre-cutoff weight offsets (in kg) for Semi-Auto silos.
+*   **`GVL.Auto_Bin_Tolerance : ARRAY[1..6] OF REAL`** (at `%MD150`)
+    *   *Description:* Allowable tolerance window ($\pm\text{Tol}$) defining `Min_Tol = Target - Tol` and `Max_Tol = Target + Tol`.
+*   **`GVL.Semi_Auto_Bin_Tolerance : ARRAY[1..10] OF REAL`** (at `%MD160`)
+    *   *Description:* Allowable tolerance window ($\pm\text{Tol}$) for Semi-Auto silos.
+*   **`GVL.Start_Button : BOOL`** (at `%MX1.0`)
+    *   *Description:* Start/Resume command for batch sequencing.
+*   **`GVL.E_Stop_Active : BOOL`** (at `%MX1.1`)
+    *   *Description:* Emergency Stop pause signal. Holds step states and freezes execution without clearing cumulative progress.
+*   **`GVL.Reset : BOOL`** (at `%MX1.3`)
+    *   *Description:* Single-shot reset trigger. Instantly zeroes all outputs, weight registers, and step states, then auto-clears back to `FALSE`.
+*   **`GVL.Cycle_Hold_Active : BOOL`** (at `%MX1.2`)
+    *   *Description:* Inter-cycle hold toggle. Becomes `TRUE` after each batch loop; must be set to `FALSE` to begin the next cycle.
+*   **`GVL.Run : BOOL`** (at `%MX1.4`)
+    *   *Description:* Process running indicator (`TRUE` during active batching, `FALSE` when idle, completed, or aborted).
+*   **`GVL.Excess_Allowed : BOOL`** (at `%MX1.5`)
+    *   *Description:* Excess weight bypass toggle. When `TRUE`, if actual weight exceeds `Max_Tol`, it logs and proceeds. When `FALSE`, it asserts `Excess_Alarm` and holds execution until weight is reduced.
+*   **`GVL.Auto_Excess_Alarm : BOOL`** (at `%MX1.6`)
+    *   *Description:* Active excess weight alarm indicator for the automated batching system.
+*   **`GVL.Semi_Auto_Excess_Alarm : BOOL`** (at `%MX1.7`)
+    *   *Description:* Active excess weight alarm indicator for the semi-automatic batching system.
+*   **`GVL.load_cell_auto : REAL`** (at `%MD170`)
+    *   *Description:* Live scale weight feedback for the automated batching system.
+*   **`GVL.load_cell_semi_auto : REAL`** (at `%MD180`)
+    *   *Description:* Live scale weight feedback for the semi-automatic batching system.
+*   **`GVL.Inter_Bin_Delay : TIME`** (at `%MD190`)
+    *   *Description:* Global settling delay time between closing a silo and verifying scale tolerance (defaults to `T#2S` if `T#0S`).
+*   **`GVL.Target_Batch_Cycles` / `GVL.Current_Batch_Cycle` (INT)** (at `%MW74`, `%MW75`)
+    *   *Description:* Configured cycle loops and current cycle number.
+*   **`GVL.Auto_Active_Mat` / `GVL.Auto_Active_Bin` / `GVL.Semi_Auto_Active_Mat` / `GVL.Semi_Auto_Active_Bin` (INT)** (at `%MW70`..`%MW73`)
+    *   *Description:* Real-time active material and silo IDs.
+*   **`GVL.Error_Code : INT`** (at `%MW76`)
+    *   *Description:* Active system diagnostic error code.
 
 ---
 
-## 2. Program Level Variables (`batching12`)
+## 2. Program Level Variables (`batching13`)
 
-These variables govern the parallel orchestration, configuration parameters, and main HMI/diagnostic mappings:
-
-### Control & Status Toggles
-*   **`Start_Button : BOOL`**
-    *   *Description:* The main process start button. Toggled `TRUE` to start the batch sequence or resume from an E-Stop pause.
-*   **`E_Stop_Active : BOOL`**
-    *   *Description:* Emergency Stop active input. When `TRUE`, immediately pauses the execution and turns off all outputs without clearing cumulative weights or cycle states.
-*   **`Reset : BOOL`**
-    *   *Description:* Dedicated hard reset. Toggling `TRUE` immediately clears all load cell weights to `0.0` kg and resets all sequence steps, error codes, and cycle counts.
-*   **`Cycle_Hold_Active : BOOL`**
-    *   *Description:* Inter-cycle hold toggle. Set `TRUE` automatically at the end of each batch loop. The operator must set it to `FALSE` to release and begin the next cycle.
-*   **`Target_Batch_Cycles : INT`**
-    *   *Description:* Configured input for the number of consecutive batch loops to execute automatically (e.g. `2` runs the entire sequence twice).
-*   **`Current_Batch_Cycle : INT`**
-    *   *Description:* Status indicator showing the sequence cycle number currently running (e.g. cycle `1` or `2`).
-*   **`Completed_Batch_Cycles : INT`**
-    *   *Description:* Counter tracking how many full sequence loop cycles have successfully finished.
-*   **`All_Cycles_Complete : BOOL`**
-    *   *Description:* Status boolean. Becomes `TRUE` once the number of completed loops reaches `Target_Batch_Cycles`.
-*   **`Error_Code : INT`**
-    *   *Description:* Main system diagnostic indicator. Represents active startup or runtime error IDs.
-*   **`Status_Message : STRING`**
-    *   *Description:* Text status message displayed on HMI panels showing process state or error details.
-
-### Silo Material Mapping
-*   **`Auto_Bin_Material_Mapping : ARRAY[1..6] OF INT`**
-    *   *Description:* Maps physical Auto Silos `1..6` to GVL Material IDs `1..20`. A value of `0` tells the sequencer to skip that silo.
-*   **`Semi_Auto_Bin_Material_Mapping : ARRAY[1..10] OF INT`**
-    *   *Description:* Maps physical Semi-Auto Silos `7..16` to GVL Material IDs `1..20`. A value of `0` tells the sequencer to skip that silo.
-
-### Cutoff & Tolerance Configurations
-*   **`Auto_Bin_Cutoff_Weights : ARRAY[1..6] OF REAL`**
-    *   *Description:* Pre-cutoff weight offset margins (in kg) for the 6 Auto silos. (e.g. `2.0` kg offset on a `50.0` kg target triggers fine feed at `48.0` kg).
-*   **`Semi_Auto_Bin_Cutoff_Weights : ARRAY[1..10] OF REAL`**
-    *   *Description:* Pre-cutoff weight offset margins (in kg) for the 10 Semi-Auto silos.
-*   **`Auto_Bin_Tolerance : ARRAY[1..6] OF REAL`**
-    *   *Description:* Tolerance weight offset margins (in kg) for the 6 Auto silos. Subtracted from target to prevent overshoot due to material in-flight after feeder shuts down.
-*   **`Semi_Auto_Bin_Tolerance : ARRAY[1..10] OF REAL`**
-    *   *Description:* Tolerance weight offset margins (in kg) for the 10 Semi-Auto silos.
-
-### Control Outputs
-*   **`Auto_Bin : ARRAY[1..6] OF BOOL`**
-    *   *Description:* Coarse feed control valve outputs for Auto silos.
-*   **`auto_bin_cutoff : ARRAY[1..6] OF BOOL`**
-    *   *Description:* Fine feed control valve outputs for Auto silos.
-*   **`auto_bin_motor : ARRAY[1..6] OF BOOL`**
-    *   *Description:* Feeder/conveyor motor outputs running during active Auto bin cycles.
-*   **`Semi_Auto_Bin : ARRAY[1..10] OF BOOL`**
-    *   *Description:* Coarse prompt indicators for Semi-Auto silos.
-*   **`semi_auto_bin_cutoff : ARRAY[1..10] OF BOOL`**
-    *   *Description:* Fine prompt indicators for Semi-Auto silos.
-*   **`semi_auto_bin_motor : ARRAY[1..10] OF BOOL`**
-    *   *Description:* Feeder/conveyor motor outputs running during active Semi-Auto bin cycles.
-
-### Dynamic Step Monitors
-*   **`Auto_Active_Mat` / `Semi_Auto_Active_Mat` (INT)**
-    *   *Description:* Material ID currently being processed in the active sequence step.
-*   **`Auto_Active_Bin` / `Semi_Auto_Active_Bin` (INT)**
-    *   *Description:* Physical Silo ID currently being processed in the active sequence step.
-*   **`Auto_Active_Target` / `Semi_Auto_Active_Target` (REAL)**
-    *   *Description:* Displays the effective target weight of the active bin (calculated as GVL Target Weight minus Tolerance).
-
----
-
-## 3. Function Block Internal Variables (`Auto_Batching_V12` & `Semi_Auto_Batching_V12`)
-
-*   **`Step : INT`**
-    *   *Description:* Current active state in the state machine (e.g. `0` = Idle, `1..6` = Active discharge, `11..16` = Settling delays, `99` = Aborted).
-*   **`bin_last_weight : REAL`**
-    *   *Description:* Scale weight snapshot (baseline) captured right before starting the current step.
-*   **`actual_bin : REAL`**
-    *   *Description:* Poured weight added during the current step, calculated as `load_cell_value - bin_last_weight`.
-*   **`target_act_bin : REAL`**
-    *   *Description:* Effective target weight calculated for the active step: `bin_set_value - Tolerance`.
-*   **`cutoff_trigger_weight : REAL`**
-    *   *Description:* The weight at which the system transitions from Coarse to Fine feed, calculated as: `bin_set_value - Tolerance - Cutoff_Weight`.
-*   **`Transition_Timer : TON` / `Completion_Timer : TON`**
-    *   *Description:* Standard CODESYS timers governing inter-step transition delays (2 seconds) and scale settling delays (2 seconds).
+*   **`Auto_Ctrl` / `Semi_Auto_Ctrl`**: Instance calls of `Auto_Batching_V13` and `Semi_Auto_Batching_V13`.
+*   **`Auto_Weights : ARRAY[1..6] OF REAL`**: Poured weights recorded per auto silo.
+*   **`Semi_Auto_Weights : ARRAY[1..10] OF REAL`**: Poured weights recorded per semi-auto silo.
+*   **`Auto_Complete` / `Semi_Auto_Complete` / `All_Cycles_Complete` (BOOL)**: Sequence completion flags.
+*   **`Status_Message : STRING`**: Real-time HMI diagnostic and process status display.
