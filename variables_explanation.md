@@ -10,6 +10,10 @@ This document explains the function of all major arrays and variables configured
     *   *Description:* Global recipe targets. Holds the raw target weight setpoint (in kg) for up to 20 different materials. 
 *   **`GVL.Run : BOOL`**
     *   *Description:* Process running indicator. Automatically set `TRUE` when sequence is executing and toggles `FALSE` upon completion, resets, or startup error aborts.
+*   **`GVL.load_cell_auto : REAL`**
+    *   *Description:* Physical load cell weight feedback (in kg) for the automated batching system, mapped to `%MD170`.
+*   **`GVL.load_cell_semi_auto : REAL`**
+    *   *Description:* Physical load cell weight feedback (in kg) for the semi-automatic batching system, mapped to `%MD180`.
 
 ---
 
@@ -38,12 +42,6 @@ These variables govern the parallel orchestration, configuration parameters, and
     *   *Description:* Main system diagnostic indicator. Represents active startup or runtime error IDs.
 *   **`Status_Message : STRING`**
     *   *Description:* Text status message displayed on HMI panels showing process state or error details.
-
-### Scale Inputs
-*   **`load_cell_auto : REAL`**
-    *   *Description:* Cumulative scale weight feedback (in kg) for the automated batching system.
-*   **`load_cell_semi_auto : REAL`**
-    *   *Description:* Cumulative scale weight feedback (in kg) for the semi-automatic batching system.
 
 ### Silo Material Mapping
 *   **`Auto_Bin_Material_Mapping : ARRAY[1..6] OF INT`**
