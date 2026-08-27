@@ -36,6 +36,16 @@ This document explains the function of all major arrays and variables configured
 * **`GVL.Semi_Auto_Material_Count : INT`** (at `%MW78`)
   * Count of active non-zero silos in Semi-Auto.
 
+### Active Bin Real-Time Target & Live Tared Weights
+* **`GVL.Auto_Active_Target_Weight : REAL`** (at `%MD220`)
+  * Target recipe weight (kg) of the currently active pouring Auto bin.
+* **`GVL.Semi_Auto_Active_Target_Weight : REAL`** (at `%MD224`)
+  * Target recipe weight (kg) of the currently active pouring Semi-Auto bin.
+* **`GVL.Auto_Active_Live_Weight : REAL`** (at `%MD228`)
+  * Live tared weight (kg) poured from the currently active Auto bin (`load_cell - bin_last_weight`).
+* **`GVL.Semi_Auto_Active_Live_Weight : REAL`** (at `%MD232`)
+  * Live tared weight (kg) poured from the currently active Semi-Auto bin (`load_cell - bin_last_weight`).
+
 ### Control Signals & Diagnostics
 * **`GVL.Start_Button : BOOL`** (at `%MX2.0`)
   * Start/Resume command for batch sequencing.
