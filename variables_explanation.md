@@ -36,6 +36,16 @@ This document explains the function of all major arrays and variables configured
 * **`GVL.Semi_Auto_Material_Count : INT`** (at `%MW78`)
   * Count of active non-zero silos in Semi-Auto.
 
+### Diagnostics, Step Tracking & Status Messages
+* **`GVL.Auto_Current_Step : INT`** (at `%MW80`)
+  * Numeric state of Auto sequence ($0 = \text{Idle}$, $1..6 = \text{Silos 1..6}$, $7 = \text{Settling Delay}$, $8 = \text{Completed}$). Directly shows where the sequence is at all times.
+* **`GVL.Semi_Auto_Current_Step : INT`** (at `%MW81`)
+  * Numeric state of Semi-Auto sequence ($0 = \text{Idle}$, $1..10 = \text{Silos 1..10}$, $31 = \text{Settling Delay}$, $32 = \text{Completed}$).
+* **`GVL.Auto_Status_Message : STRING(80)`**
+  * Real-time detailed textual diagnostic string describing exact system state, feeding mode, cycle progress, or stuck reason (e.g. `'Auto [Step 2]: Coarse Feeding'`, `'Auto [Step 3]: STUCK - Excess Weight!'`, `'Auto [State 0]: Cannot Start - Scale Exceeds Tare Tolerance'`).
+* **`GVL.Semi_Auto_Status_Message : STRING(80)`**
+  * Real-time detailed textual diagnostic string for Semi-Auto.
+
 ### Active Bin Real-Time Target & Live Tared Weights (HMI Bidirectional)
 * **`GVL.Auto_Active_Target_Weight : REAL`** (at `%MD220`)
   * Target weight (kg) of the currently active pouring Auto bin. Can be loaded from `Recipe_Weights` or entered directly from the HMI. In Idle, HMI inputs are preserved and not overwritten.
