@@ -81,14 +81,16 @@ Both `batching13` and `batching14` perform the **exact same automation logic** w
   * Emergency Stop signal (`TRUE` = Healthy contact closed, `FALSE` = Tripped contact open).
 * **`GVL.Reset : BOOL`** (at `%MX2.3`)
   * Single-shot reset trigger. Zeroes outputs, weights, counters, and registers.
-* **`GVL.Cycle_Hold_Active : BOOL`** (at `%MX2.4`)
-  * Inter-cycle hold toggle. Set to `FALSE` to start next cycle after emptying scale.
+* **`GVL.Next_Cycle_Start : BOOL`** (at `%MX2.4`)
+  * Interlocked momentary command pulse/signal to start next batch cycle after hoppers are emptied below `Empty_Weight_Limit`. Automatically turned OFF once processed. Forced `FALSE` during active dosing.
 * **`GVL.Run : BOOL`** (at `%MX2.5`)
   * Process running indicator (`TRUE` during active batching).
 * **`GVL.Auto_Sequence_Complete : BOOL`** (at `%MX3.0`)
   * Handshake flag indicating Auto Silos 1..6 completed current cycle.
 * **`GVL.Semi_Auto_Sequence_Complete : BOOL`** (at `%MX3.1`)
   * Handshake flag indicating Semi-Auto Silos 1..10 completed current cycle.
+* **`GVL.All_Cycles_Complete : BOOL`** (at `%MX3.2`)
+  * Master status flag: `TRUE` when all configured `Target_Batch_Cycles` have completed. Resets to `FALSE` on new batch start or master `Reset`.
 * **`GVL.Auto_Excess_Allowed : BOOL`** (at `%MX2.6`)
   * Auto excess weight bypass toggle.
 * **`GVL.Semi_Auto_Excess_Allowed : BOOL`** (at `%MX2.9`)
@@ -105,7 +107,7 @@ Both `batching13` and `batching14` perform the **exact same automation logic** w
   * Settling delay time between Auto silos.
 * **`GVL.Semi_Auto_Inter_Bin_Delay : TIME`** (at `%MD194`)
   * Settling delay time between Semi-Auto silos.
-* **`GVL.Target_Batch_Cycles` / `GVL.Current_Batch_Cycle` (INT)** (at `%MW74`, `%MW75`)
+* **`GVL.Target_Batch_Cycles` / `GVL.Current_Batch_Cycle` / `GVL.Completed_Batch_Cycles` (INT)** (at `%MW74`, `%MW75`, `%MW79`)
 * **`GVL.Auto_Active_Mat` / `GVL.Auto_Active_Bin` / `GVL.Semi_Auto_Active_Mat` / `GVL.Semi_Auto_Active_Bin` (INT)** (at `%MW70`..`%MW73`)
 * **`GVL.Error_Code : INT`** (at `%MW76`)
 
@@ -118,3 +120,13 @@ Both `batching13` and `batching14` perform the **exact same automation logic** w
 * **`GVL.semi_auto_bin_motor : ARRAY[1..10] OF BOOL`**
 * **`GVL.Auto_Weights : ARRAY[1..6] OF REAL`**
 * **`GVL.Semi_Auto_Weights : ARRAY[1..10] OF REAL`**
+
+### Function Block Cycle Output Pins
+* **Auto Block (`Auto_Ctrl`) Output Pins**:
+  * `Auto_Current_Batch_Cycle : INT` (Live active cycle number 1..N)
+  * `Auto_Completed_Batch_Cycles : INT` (Total cycles successfully finished)
+  * `Auto_All_Cycles_Complete : BOOL` (TRUE when all configured cycles finish)
+* **Semi-Auto Block (`Semi_Auto_Ctrl`) Output Pins**:
+  * `Semi_Auto_Current_Batch_Cycle : INT` (Live active cycle number 1..N)
+  * `Semi_Auto_Completed_Batch_Cycles : INT` (Total cycles successfully finished)
+  * `Semi_Auto_All_Cycles_Complete : BOOL` (TRUE when all configured cycles finish)
