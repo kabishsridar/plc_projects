@@ -1,6 +1,6 @@
 # AC500 V3 Batching System Variable & Array Reference
 
-This document explains the function of all major arrays and variables configured in **`batching13`** and its sub-blocks (`Auto_Batching_V13`, `Semi_Auto_Batching_V13`).
+This document explains the function of all major arrays and variables configured in **`batching14`** (FBD) and **`batching13`** (ST) along with their sub-blocks (`Auto_Batching_V14`/`V13`, `Semi_Auto_Batching_V14`/`V13`).
 
 ---
 
@@ -14,11 +14,11 @@ This document explains the function of all major arrays and variables configured
 * **`GVL.Semi_Auto_Bin_Material_Mapping : ARRAY[1..10] OF INT`** (at `%MW60`)
   * Maps physical Semi-Auto Silos `1..10` to GVL Material IDs `1..20`. A value of `0` skips that silo.
 
-### Cutoff, Tolerance & Cumulative Totals
-* **`GVL.Auto_Bin_Cutoff_Weights : ARRAY[1..6] OF REAL`** (at `%MD120`)
-  * Pre-cutoff weight offsets (in kg) triggering transition from Coarse to Fine feed.
-* **`GVL.Semi_Auto_Bin_Cutoff_Weights : ARRAY[1..10] OF REAL`** (at `%MD130`)
-  * Pre-cutoff weight offsets (in kg) for Semi-Auto silos.
+### Coarse to Fine Transition, Tolerance & Cumulative Totals
+* **`GVL.Auto_Coarse_To_Fine_Speed : ARRAY[1..6] OF REAL`** (at `%MD120`)
+  * Weight offset (in kg) before reaching target that triggers the transition from Coarse Feed to Fine Feed (`Cutoff_Trigger = Target - Coarse_To_Fine_Speed`).
+* **`GVL.Semi_Auto_Coarse_To_Fine_Speed : ARRAY[1..10] OF REAL`** (at `%MD130`)
+  * Weight offset (in kg) before reaching target that triggers the transition from Coarse Feed to Fine Feed for Semi-Auto silos.
 * **`GVL.Auto_Bin_Tolerance : ARRAY[1..6] OF REAL`** (at `%MD150`)
   * Allowable tolerance window ($\pm\text{Tol}$) defining `Min_Tol = Target - Tol` and `Max_Tol = Target + Tol`.
 * **`GVL.Semi_Auto_Bin_Tolerance : ARRAY[1..10] OF REAL`** (at `%MD160`)
@@ -36,27 +36,33 @@ This document explains the function of all major arrays and variables configured
 * **`GVL.Semi_Auto_Material_Count : INT`** (at `%MW78`)
   * Count of active non-zero silos in Semi-Auto.
 
-### Active Bin Real-Time Target & Live Tared Weights
+### Active Bin Real-Time Target & Live Tared Weights (HMI Bidirectional)
 * **`GVL.Auto_Active_Target_Weight : REAL`** (at `%MD220`)
-  * Target recipe weight (kg) of the currently active pouring Auto bin.
+  * Target weight (kg) of the currently active pouring Auto bin. Can be loaded from `Recipe_Weights` or entered directly from the HMI. In Idle, HMI inputs are preserved and not overwritten.
 * **`GVL.Semi_Auto_Active_Target_Weight : REAL`** (at `%MD224`)
-  * Target recipe weight (kg) of the currently active pouring Semi-Auto bin.
+  * Target weight (kg) of the currently active pouring Semi-Auto bin. Can be loaded from `Recipe_Weights` or entered directly from the HMI. In Idle, HMI inputs are preserved and not overwritten.
 * **`GVL.Auto_Active_Live_Weight : REAL`** (at `%MD228`)
   * Live tared weight (kg) poured from the currently active Auto bin (`load_cell - bin_last_weight`).
 * **`GVL.Semi_Auto_Active_Live_Weight : REAL`** (at `%MD232`)
   * Live tared weight (kg) poured from the currently active Semi-Auto bin (`load_cell - bin_last_weight`).
 
-### Control Signals & Diagnostics
+### Control Signals, Sequence Synchronization & Diagnostics
 * **`GVL.Start_Button : BOOL`** (at `%MX2.0`)
-  * Start/Resume command for batch sequencing.
+  * Start/Resume command for batch sequencing. Auto-cleared to `FALSE` when all cycles complete.
 * **`GVL.E_Stop_Active : BOOL`** (at `%MX2.1`)
-  * Emergency Stop pause signal.
+  * Standard Normally Closed (NC) Emergency Stop input:
+    * `TRUE` = Circuit closed, Healthy (E-Stop not pressed).
+    * `FALSE` = Circuit open, E-Stop Pressed/Tripped! All outputs immediately shut off.
 * **`GVL.Reset : BOOL`** (at `%MX2.3`)
-  * Single-shot reset trigger. Instantly zeroes all outputs, weight registers, and step states.
+  * Single-shot reset trigger. Zeroes all target recipe weights, active target weights, live weights, and cycle counters across both blocks without race conditions.
 * **`GVL.Cycle_Hold_Active : BOOL`** (at `%MX2.4`)
-  * Inter-cycle hold toggle. Set to `FALSE` to start next cycle.
+  * Inter-cycle hold toggle. Set to `TRUE` between cycles; clear to `FALSE` to proceed to next cycle after tare scale check.
 * **`GVL.Run : BOOL`** (at `%MX2.5`)
   * Process running indicator (`TRUE` during active batching).
+* **`GVL.Auto_Sequence_Complete : BOOL`** (at `%MX3.0`)
+  * Handshake flag indicating Auto Silos 1..6 have completed their active cycle.
+* **`GVL.Semi_Auto_Sequence_Complete : BOOL`** (at `%MX3.1`)
+  * Handshake flag indicating Semi-Auto Silos 1..10 have completed their active cycle.
 * **`GVL.Auto_Excess_Allowed : BOOL`** (at `%MX2.6`)
   * Auto excess weight bypass toggle.
 * **`GVL.Semi_Auto_Excess_Allowed : BOOL`** (at `%MX2.9`)
