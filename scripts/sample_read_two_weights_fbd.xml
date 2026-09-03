@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="Automation Builder 2.7 - Basic" productVersion="Automation Builder 2.7" creationDateTime="2026-09-01T00:25:00" />
+  <contentHeader name="Rasi_feeds_batching2.project">
+    <coordinateInfo>
+      <fbd><scaling x="1" y="1" /></fbd>
+      <ld><scaling x="1" y="1" /></ld>
+      <sfc><scaling x="1" y="1" /></sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="sample_read_two_weights" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Enable"><type><BOOL /></type><initialValue><simpleValue value="TRUE" /></initialValue></variable>
+            <variable name="Com_Slot"><type><BYTE /></type><initialValue><simpleValue value="1" /></initialValue></variable>
+            <variable name="Slave_Auto_ID"><type><BYTE /></type><initialValue><simpleValue value="1" /></initialValue></variable>
+            <variable name="Slave_Semi_ID"><type><BYTE /></type><initialValue><simpleValue value="2" /></initialValue></variable>
+            <variable name="iDivisor_Auto"><type><REAL /></type><initialValue><simpleValue value="10.0" /></initialValue></variable>
+            <variable name="iDivisor_Semi"><type><REAL /></type><initialValue><simpleValue value="10.0" /></initialValue></variable>
+            <variable name="Tare_Auto"><type><BOOL /></type></variable>
+            <variable name="Tare_Semi"><type><BOOL /></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Weight_Auto"><type><REAL /></type></variable>
+            <variable name="Weight_Semi"><type><REAL /></type></variable>
+            <variable name="Auto_Fault"><type><BOOL /></type></variable>
+            <variable name="Semi_Fault"><type><BOOL /></type></variable>
+            <variable name="Bus_Busy"><type><BOOL /></type></variable>
+            <variable name="Active_Node"><type><BYTE /></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="fbMulti"><type><derived name="FB_Samyak_Multi" /></type></variable>
+            <variable name="arrSlaves"><type><array><dimension lower="1" upper="4" /><baseType><BYTE /></baseType></array></type><initialValue><arrayValue><value><simpleValue value="1" /></value><value><simpleValue value="2" /></value><value><simpleValue value="0" /></value><value><simpleValue value="0" /></value></arrayValue></initialValue></variable>
+            <variable name="arrDiv"><type><array><dimension lower="1" upper="4" /><baseType><REAL /></baseType></array></type><initialValue><arrayValue><value><simpleValue value="10.0" /></value><value><simpleValue value="10.0" /></value><value><simpleValue value="1.0" /></value><value><simpleValue value="1.0" /></value></arrayValue></initialValue></variable>
+            <variable name="arrTare"><type><array><dimension lower="1" upper="4" /><baseType><BOOL /></baseType></array></type></variable>
+            <variable name="Weight_Scaled_Array"><type><array><dimension lower="1" upper="4" /><baseType><REAL /></baseType></array></type></variable>
+            <variable name="Line_Fault_Array"><type><array><dimension lower="1" upper="4" /><baseType><BOOL /></baseType></array></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <FBD>
+            <vendorElement localId="10000000000">
+              <position x="0" y="0" />
+              <alternativeText><xhtml xmlns="http://www.w3.org/1999/xhtml">FBD Implementation Attributes</xhtml></alternativeText>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/fbd/implementationattributes" handleUnknown="implementation">
+                  <fbdattributes xmlns=""><attribute name="BoxInputFlagsSupported" value="true" /></fbdattributes>
+                </data>
+              </addData>
+            </vendorElement>
+
+            <!-- Network 1: Call fbMulti (FB_Samyak_Multi) -->
+            <inVariable localId="1"><position x="50" y="50" /><connectionPointOut /><expression>Com_Slot</expression></inVariable>
+            <inVariable localId="2"><position x="50" y="70" /><connectionPointOut /><expression>2</expression></inVariable>
+            <inVariable localId="3"><position x="50" y="90" /><connectionPointOut /><expression>arrSlaves</expression></inVariable>
+            <inVariable localId="4"><position x="50" y="110" /><connectionPointOut /><expression>arrDiv</expression></inVariable>
+            <inVariable localId="5"><position x="50" y="130" /><connectionPointOut /><expression>arrTare</expression></inVariable>
+
+            <block localId="10" typeName="FB_Samyak_Multi" instanceName="fbMulti">
+              <position x="250" y="50" />
+              <inputVariables>
+                <variable formalParameter="Com_Slot"><connectionPointIn><connection refLocalId="1" /></connectionPointIn></variable>
+                <variable formalParameter="iSlaveCount"><connectionPointIn><connection refLocalId="2" /></connectionPointIn></variable>
+                <variable formalParameter="arrSlaveIDs"><connectionPointIn><connection refLocalId="3" /></connectionPointIn></variable>
+                <variable formalParameter="arrDivisor"><connectionPointIn><connection refLocalId="4" /></connectionPointIn></variable>
+                <variable formalParameter="arrTare_In"><connectionPointIn><connection refLocalId="5" /></connectionPointIn></variable>
+              </inputVariables>
+              <inOutVariables />
+              <outputVariables>
+                <variable formalParameter="arrWeight_Scaled" />
+                <variable formalParameter="arrLine_Fault" />
+                <variable formalParameter="arrErrCount" />
+                <variable formalParameter="iCurrent_ID" />
+                <variable formalParameter="xStatus_Busy" />
+              </outputVariables>
+            </block>
+
+            <outVariable localId="20"><position x="550" y="50" /><connectionPointIn><connection refLocalId="10" formalParameter="arrWeight_Scaled" /></connectionPointIn><expression>Weight_Scaled_Array</expression></outVariable>
+            <outVariable localId="21"><position x="550" y="70" /><connectionPointIn><connection refLocalId="10" formalParameter="arrLine_Fault" /></connectionPointIn><expression>Line_Fault_Array</expression></outVariable>
+            <outVariable localId="22"><position x="550" y="110" /><connectionPointIn><connection refLocalId="10" formalParameter="iCurrent_ID" /></connectionPointIn><expression>Active_Node</expression></outVariable>
+            <outVariable localId="23"><position x="550" y="130" /><connectionPointIn><connection refLocalId="10" formalParameter="xStatus_Busy" /></connectionPointIn><expression>Bus_Busy</expression></outVariable>
+
+            <!-- Network 2: Unpack Slot 1 to Weight_Auto and GVL.load_cell_auto -->
+            <inVariable localId="30"><position x="50" y="200" /><connectionPointOut /><expression>Weight_Scaled_Array[1]</expression></inVariable>
+            <outVariable localId="31"><position x="350" y="200" /><connectionPointIn><connection refLocalId="30" /></connectionPointIn><expression>Weight_Auto</expression></outVariable>
+            <outVariable localId="32"><position x="350" y="220" /><connectionPointIn><connection refLocalId="30" /></connectionPointIn><expression>GVL.load_cell_auto</expression></outVariable>
+
+            <!-- Network 3: Unpack Slot 2 to Weight_Semi and GVL.load_cell_semi_auto -->
+            <inVariable localId="40"><position x="50" y="280" /><connectionPointOut /><expression>Weight_Scaled_Array[2]</expression></inVariable>
+            <outVariable localId="41"><position x="350" y="280" /><connectionPointIn><connection refLocalId="40" /></connectionPointIn><expression>Weight_Semi</expression></outVariable>
+            <outVariable localId="42"><position x="350" y="300" /><connectionPointIn><connection refLocalId="40" /></connectionPointIn><expression>GVL.load_cell_semi_auto</expression></outVariable>
+
+            <!-- Network 4: Fault Flags -->
+            <inVariable localId="50"><position x="50" y="360" /><connectionPointOut /><expression>Line_Fault_Array[1]</expression></inVariable>
+            <outVariable localId="51"><position x="350" y="360" /><connectionPointIn><connection refLocalId="50" /></connectionPointIn><expression>Auto_Fault</expression></outVariable>
+
+            <inVariable localId="60"><position x="50" y="420" /><connectionPointOut /><expression>Line_Fault_Array[2]</expression></inVariable>
+            <outVariable localId="61"><position x="350" y="420" /><connectionPointIn><connection refLocalId="60" /></connectionPointIn><expression>Semi_Fault</expression></outVariable>
+          </FBD>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances><configurations /></instances>
+</project>
