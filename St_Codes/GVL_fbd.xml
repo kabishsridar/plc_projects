@@ -1,0 +1,467 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="Automation Builder 2.7 - Basic" productVersion="Automation Builder 2.7" creationDateTime="2026-09-03T18:55:00.0701962" />
+  <contentHeader name="Rasi_feeds_batching2.project" modificationDateTime="2026-09-01T07:53:31.7371227">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous />
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/globalvars" handleUnknown="implementation">
+      <globalVars name="GVL">
+        <variable name="Recipe_Weights" address="%MD100">
+          <type>
+            <array>
+              <dimension lower="1" upper="20" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Auto_Bin_Material_Mapping" address="%MW50">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <INT />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Bin_Material_Mapping" address="%MW60">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <INT />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Auto_Coarse_To_Fine_speed" address="%MD120">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+          <initialValue>
+            <arrayValue>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+            </arrayValue>
+          </initialValue>
+        </variable>
+        <variable name="Semi_Auto_Coarse_To_Fine_speed" address="%MD130">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+          <initialValue>
+            <arrayValue>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+              <value>
+                <simpleValue value="1.0" />
+              </value>
+            </arrayValue>
+          </initialValue>
+        </variable>
+        <variable name="Auto_Bin_Tolerance" address="%MD150">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Bin_Tolerance" address="%MD160">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Start_Button" address="%MX2.0">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="E_Stop_Active" address="%MX2.1">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Reset" address="%MX2.3">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Next_Cycle_Start" address="%MX2.4">
+          <type>
+            <BOOL />
+          </type>
+          <documentation>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"> Command pulse/signal to start next batch cycle after hoppers are emptied</xhtml>
+          </documentation>
+        </variable>
+        <variable name="Auto_Active_Mat" address="%MW70">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Auto_Active_Bin" address="%MW71">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Active_Mat" address="%MW72">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Active_Bin" address="%MW73">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Target_Batch_Cycles" address="%MW74">
+          <type>
+            <INT />
+          </type>
+          <initialValue>
+            <simpleValue value="1" />
+          </initialValue>
+        </variable>
+        <variable name="Current_Batch_Cycle" address="%MW75">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Completed_Batch_Cycles" address="%MW79">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Error_Code" address="%MW76">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Run" address="%MX2.5">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="load_cell_auto" address="%MD174">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="load_cell_semi_auto" address="%MD175">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Auto_Initial_Tolerance" address="%MD176">
+          <type>
+            <REAL />
+          </type>
+          <initialValue>
+            <simpleValue value="5.0" />
+          </initialValue>
+        </variable>
+        <variable name="Semi_Auto_Initial_Tolerance" address="%MD178">
+          <type>
+            <REAL />
+          </type>
+          <initialValue>
+            <simpleValue value="5.0" />
+          </initialValue>
+        </variable>
+        <variable name="Empty_Weight_Limit" address="%MD186">
+          <type>
+            <REAL />
+          </type>
+          <initialValue>
+            <simpleValue value="5.0" />
+          </initialValue>
+          <documentation>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"> Maximum scale weight limit (kg) to qualify scale as empty before starting next cycle</xhtml>
+          </documentation>
+        </variable>
+        <variable name="Auto_Total_Target_Weight" address="%MD180">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Total_Target_Weight" address="%MD184">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Auto_Material_Count" address="%MW77">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Material_Count" address="%MW78">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Auto_Current_Step" address="%MW80">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Current_Step" address="%MW81">
+          <type>
+            <INT />
+          </type>
+        </variable>
+        <variable name="Auto_Active_Target_Weight" address="%MD220">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Active_Target_Weight" address="%MD224">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Auto_Active_Live_Weight" address="%MD228">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Active_Live_Weight" address="%MD232">
+          <type>
+            <REAL />
+          </type>
+        </variable>
+        <variable name="Auto_Excess_Allowed" address="%MX2.6">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Excess_Allowed" address="%MX2.9">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Auto_Excess_Alarm" address="%MX2.7">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Excess_Alarm" address="%MX2.8">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Auto_Inter_Bin_Delay" address="%MD190">
+          <type>
+            <TIME />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Inter_Bin_Delay" address="%MD194">
+          <type>
+            <TIME />
+          </type>
+        </variable>
+        <variable name="Auto_Sequence_Complete" address="%MX3.0">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Sequence_Complete" address="%MX3.1">
+          <type>
+            <BOOL />
+          </type>
+        </variable>
+        <variable name="All_Cycles_Complete" address="%MX3.2">
+          <type>
+            <BOOL />
+          </type>
+          <documentation>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"> Master flag: TRUE when all target batch cycles have completed</xhtml>
+          </documentation>
+        </variable>
+        <variable name="Auto_Status_Message">
+          <type>
+            <string length="80" />
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Status_Message">
+          <type>
+            <string length="80" />
+          </type>
+        </variable>
+        <variable name="Auto_Bin">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+          <documentation>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"> 8 Process Output and Weight Arrays </xhtml>
+          </documentation>
+        </variable>
+        <variable name="auto_bin_cutoff">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="auto_bin_motor">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Bin">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="semi_auto_bin_cutoff">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="semi_auto_bin_motor">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <BOOL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Auto_Weights">
+          <type>
+            <array>
+              <dimension lower="1" upper="6" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <variable name="Semi_Auto_Weights">
+          <type>
+            <array>
+              <dimension lower="1" upper="10" />
+              <baseType>
+                <REAL />
+              </baseType>
+            </array>
+          </type>
+        </variable>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+            <Attributes>
+              <Attribute Name="qualified_only" Value="" />
+            </Attributes>
+          </data>
+        </addData>
+      </globalVars>
+    </data>
+  </addData>
+</project>

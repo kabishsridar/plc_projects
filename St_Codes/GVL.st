@@ -1,0 +1,66 @@
+(* ==========================================
+   POU: GVL
+   ========================================== *)
+
+=== DECLARATION ===
+{attribute 'qualified_only'}
+VAR_GLOBAL
+    Recipe_Weights AT %MD100 : ARRAY[1..20] OF REAL;
+	Auto_Bin_Material_Mapping AT %MW50: ARRAY[1..6] OF INT;
+	Semi_Auto_Bin_Material_Mapping AT %MW60: ARRAY[1..10] OF INT;
+	Auto_Coarse_To_Fine_speed AT %MD120: ARRAY[1..6] OF REAL := [1.0,1.0,1.0,1.0,1.0,1.0];
+	Semi_Auto_Coarse_To_Fine_speed AT %MD130: ARRAY[1..10] OF REAL := [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0];
+	Auto_Bin_Tolerance AT %MD150: ARRAY[1..6] OF REAL;
+	Semi_Auto_Bin_Tolerance AT %MD160: ARRAY[1..10] OF REAL;
+	Start_Button AT %MX2.0: BOOL;
+	E_Stop_Active AT %MX2.1: BOOL;
+	Reset AT %MX2.3: BOOL;
+	Next_Cycle_Start AT %MX2.4: BOOL;               // Command pulse/signal to start next batch cycle after hoppers are emptied
+	Auto_Active_Mat AT %MW70: INT;
+	Auto_Active_Bin AT %MW71: INT;
+	Semi_Auto_Active_Mat AT %MW72: INT;
+	Semi_Auto_Active_Bin AT %MW73: INT;
+	Target_Batch_Cycles AT %MW74: INT := 1;
+	Current_Batch_Cycle AT %MW75: INT;
+	Completed_Batch_Cycles AT %MW79: INT;
+	Error_Code AT %MW76: INT;
+	Run AT %MX2.5 : BOOL;
+	load_cell_auto AT %MD174 : REAL;
+	load_cell_semi_auto AT %MD175 : REAL;
+	Auto_Initial_Tolerance AT %MD176 : REAL := 5.0;
+	Semi_Auto_Initial_Tolerance AT %MD178 : REAL := 5.0;
+	Empty_Weight_Limit AT %MD186 : REAL := 5.0;     // Maximum scale weight limit (kg) to qualify scale as empty before starting next cycle
+	Auto_Total_Target_Weight AT %MD180 : REAL;
+	Semi_Auto_Total_Target_Weight AT %MD184 : REAL;
+	Auto_Material_Count AT %MW77 : INT;
+	Semi_Auto_Material_Count AT %MW78 : INT;
+	Auto_Current_Step AT %MW80 : INT;
+	Semi_Auto_Current_Step AT %MW81 : INT;
+	Auto_Active_Target_Weight AT %MD220 : REAL;
+	Semi_Auto_Active_Target_Weight AT %MD224 : REAL;
+	Auto_Active_Live_Weight AT %MD228 : REAL;
+	Semi_Auto_Active_Live_Weight AT %MD232 : REAL;
+	Auto_Excess_Allowed AT %MX2.6 : BOOL;
+	Semi_Auto_Excess_Allowed AT %MX2.9 : BOOL;
+	Auto_Excess_Alarm AT %MX2.7 : BOOL;
+	Semi_Auto_Excess_Alarm AT %MX2.8 : BOOL;
+	Auto_Inter_Bin_Delay AT %MD190 : TIME;
+	Semi_Auto_Inter_Bin_Delay AT %MD194 : TIME;
+	Auto_Sequence_Complete AT %MX3.0 : BOOL;
+	Semi_Auto_Sequence_Complete AT %MX3.1 : BOOL;
+	All_Cycles_Complete AT %MX3.2 : BOOL;           // Master flag: TRUE when all target batch cycles have completed
+	Auto_Status_Message : STRING(80);
+	Semi_Auto_Status_Message : STRING(80);
+	
+	(* 8 Process Output and Weight Arrays *)
+	Auto_Bin : ARRAY[1..6] OF BOOL;
+	auto_bin_cutoff : ARRAY[1..6] OF BOOL;
+	auto_bin_motor : ARRAY[1..6] OF BOOL;
+	Semi_Auto_Bin : ARRAY[1..10] OF BOOL;
+	semi_auto_bin_cutoff : ARRAY[1..10] OF BOOL;
+	semi_auto_bin_motor : ARRAY[1..10] OF BOOL;
+	Auto_Weights : ARRAY[1..6] OF REAL;
+	Semi_Auto_Weights : ARRAY[1..10] OF REAL;
+END_VAR
+
+

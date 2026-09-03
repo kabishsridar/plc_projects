@@ -1,3 +1,8 @@
+(* ==========================================
+   POU: Semi_Auto_Batching_V14
+   ========================================== *)
+
+=== DECLARATION ===
 FUNCTION_BLOCK Semi_Auto_Batching_V14
 VAR_INPUT
     Start_Button : BOOL;                                 // Command pulse/signal to start or resume the semi-auto batching sequence
@@ -5,7 +10,7 @@ VAR_INPUT
     Reset : BOOL;                                        // System reset pulse (clears active steps, outputs, alarms, and error flags)
     Semi_Auto_Bin_Material_Mapping : ARRAY[1..10] OF INT;// Array mapping physical Silos 1..10 to Recipe Material IDs (1..20, 0 = Silo skipped)
     Semi_Auto_Coarse_To_Fine_Speed : ARRAY[1..10] OF REAL;// Weight offset threshold (kg) before target to transition from Coarse to Fine feeding
-    Semi_Auto_Bin_Tolerance : ARRAY[1..10] OF REAL;      // Allowable weight tolerance window (Â±kg) around target weight for each silo
+    Semi_Auto_Bin_Tolerance : ARRAY[1..10] OF REAL;      // Allowable weight tolerance window (±kg) around target weight for each silo
     Inter_Bin_Delay : TIME;                              // Settling delay duration after completing a bin before advancing to the next
     Excess_Allowed : BOOL;                               // Overfill handling policy: TRUE = proceed if target is exceeded, FALSE = raise alarm and halt
     load_cell_value : REAL;                              // Live gross weight input reading from the Semi-Auto scale load cell (kg)
@@ -69,7 +74,7 @@ VAR
     Run_Rising : BOOL;
 END_VAR
 
-
+=== IMPLEMENTATION ===
 
 (* Semi-Auto Batching FB V14 with Full Diagnostics, Step Tracking, and Precise Status Reporting *)
 
@@ -403,3 +408,4 @@ END_FOR;
 Semi_Auto_Current_Batch_Cycle := GVL.Current_Batch_Cycle;
 Semi_Auto_Completed_Batch_Cycles := GVL.Completed_Batch_Cycles;
 Semi_Auto_All_Cycles_Complete := GVL.All_Cycles_Complete;
+
