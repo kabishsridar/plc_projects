@@ -40,8 +40,6 @@ VAR_GLOBAL
 	Semi_Auto_Active_Target_Weight AT %MD224 : REAL;
 	Auto_Active_Live_Weight AT %MD172 : REAL;
 	Semi_Auto_Active_Live_Weight AT %MD173 : REAL;
-	Auto_Excess_Allowed AT %MX2.6: BOOL := 1;
-	Semi_Auto_Excess_Allowed AT %MX2.9 : BOOL;
 	Auto_Excess_Alarm AT %MX2.7 : BOOL;
 	Semi_Auto_Excess_Alarm AT %MX2.8 : BOOL;
 	Auto_Inter_Bin_Delay AT %MD190 : TIME;

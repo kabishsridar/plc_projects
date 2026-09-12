@@ -396,7 +396,7 @@ CASE Current_Step OF
                 Inter_Bin_Timer(IN := FALSE);
                 Inter_Bin_Settle_Arm := 1;
             ELSE
-                Inter_Bin_Timer(IN := TRUE, PT := Inter_Bin_Delay);
+                Inter_Bin_Timer(IN := TRUE, PT := Effective_Delay);
                 IF Inter_Bin_Timer.Q THEN
                     Inter_Bin_Timer(IN := FALSE);
                     bin_last_weight := load_cell_value;
@@ -530,6 +530,7 @@ GVL.Semi_Auto_Active_Bin := Active_Bin_ID;
 GVL.Semi_Auto_Active_Target_Weight := Active_Target_Weight;
 GVL.Semi_Auto_Active_Live_Weight := Active_Live_Weight;
 GVL.Semi_Auto_Current_Step := Current_Step;
+GVL.Semi_Auto_Excess_Alarm := Excess_Alarm;
 
 Semi_Auto_Current_Batch_Cycle := GVL.Current_Batch_Cycle;
 Semi_Auto_Completed_Batch_Cycles := GVL.Completed_Batch_Cycles;
