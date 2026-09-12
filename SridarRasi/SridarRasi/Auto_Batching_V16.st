@@ -80,6 +80,7 @@ VAR
     Inter_Bin_Settling : BOOL;
     Inter_Bin_Settle_Arm : INT;
     Inter_Bin_Timer : TON;
+    Periodic_Check_Timer : TON;
     Settle_Hold_Step : INT;
     Settle_Hold_Mat : INT;
     Settle_Hold_Target : REAL;
@@ -770,47 +771,46 @@ CASE Current_Step OF
         END_WHILE;
 
         IF Inter_Bin_Settling THEN
-            FOR i := 1 TO 6 DO
-                Auto_Bin[i] := FALSE;
-                auto_motor_slow_trigger[i] := FALSE;
-                auto_bin_motor[i] := FALSE;
-            END_FOR;
             Active_Material_ID := Settle_Hold_Mat;
             Active_Bin_ID := Settle_Hold_Step;
             Active_Target_Weight := Settle_Hold_Target;
             
-            // If held on Excess_Alarm and Excess_Allowed is enabled, clear alarm and advance
-            IF Excess_Alarm AND Excess_Allowed THEN
-                Excess_Alarm := FALSE;
-                bin_last_weight := load_cell_value;
-                PersistentVars.Ret_bin_last_weight := bin_last_weight;
-                PersistentVars.bin_last_weight := bin_last_weight;
-                Current_Step := Inter_Bin_Next_Step;
-                Last_Dosing_Step := Current_Step;
-                Inter_Bin_Settling := FALSE;
-                Inter_Bin_Settle_Arm := 0;
-            ELSIF NOT Excess_Alarm THEN
-                IF Inter_Bin_Settle_Arm = 0 THEN
+            min_tol_weight := Settle_Hold_Target - Auto_Bin_Tolerance[Settle_Hold_Step];
+            max_tol_weight := Settle_Hold_Target + Auto_Bin_Tolerance[Settle_Hold_Step];
+
+            actual_bin := load_cell_value - bin_last_weight;
+            IF actual_bin < 0.0 THEN
+                actual_bin := 0.0;
+            END_IF;
+            Actual_Weights[Settle_Hold_Step] := actual_bin;
+            Active_Live_Weight := actual_bin;
+
+            CASE Inter_Bin_Settle_Arm OF
+                0: // Arm settling timer
+                    FOR i := 1 TO 6 DO
+                        Auto_Bin[i] := FALSE;
+                        auto_motor_slow_trigger[i] := FALSE;
+                        auto_bin_motor[i] := FALSE;
+                    END_FOR;
                     Inter_Bin_Timer(IN := FALSE);
+                    Periodic_Check_Timer(IN := FALSE);
                     Inter_Bin_Settle_Arm := 1;
-                ELSE
+                    Status_Message := CONCAT('Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Settling in progress...'));
+
+                1: // Settling delay timer running (Effective_Delay)
+                    FOR i := 1 TO 6 DO
+                        Auto_Bin[i] := FALSE;
+                        auto_motor_slow_trigger[i] := FALSE;
+                        auto_bin_motor[i] := FALSE;
+                    END_FOR;
                     Inter_Bin_Timer(IN := TRUE, PT := Effective_Delay);
                     IF Inter_Bin_Timer.Q THEN
                         Inter_Bin_Timer(IN := FALSE);
                         
-                        // Post-settling final weight check (accounts for in-flight tailings / scale stabilization)
-                        actual_bin := load_cell_value - bin_last_weight;
-                        IF actual_bin < 0.0 THEN
-                            actual_bin := 0.0;
-                        END_IF;
-                        Actual_Weights[Settle_Hold_Step] := actual_bin;
-                        Active_Live_Weight := actual_bin;
-                        
-                        min_tol_weight := Settle_Hold_Target - Auto_Bin_Tolerance[Settle_Hold_Step];
-                        max_tol_weight := Settle_Hold_Target + Auto_Bin_Tolerance[Settle_Hold_Step];
-                        
+                        // Post-settle check
                         IF actual_bin > max_tol_weight THEN
                             IF Excess_Allowed THEN
+                                // Excess allowed: lock weight and advance
                                 Excess_Alarm := FALSE;
                                 bin_last_weight := load_cell_value;
                                 PersistentVars.Ret_bin_last_weight := bin_last_weight;
@@ -820,17 +820,20 @@ CASE Current_Step OF
                                 Inter_Bin_Settling := FALSE;
                                 Inter_Bin_Settle_Arm := 0;
                             ELSE
+                                // Overfilled: trigger alarm and enter 500ms monitoring
                                 Excess_Alarm := TRUE;
+                                Inter_Bin_Settle_Arm := 2;
+                                Periodic_Check_Timer(IN := FALSE);
                                 Status_Message := CONCAT('Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Settled Overfill Alarm!'));
                             END_IF;
                         ELSIF actual_bin < min_tol_weight THEN
-                            // If settled weight is below minimum tolerance, resume fine feeding to top up
-                            Inter_Bin_Settling := FALSE;
-                            Inter_Bin_Settle_Arm := 0;
+                            // Underfilled: enter 500ms top-up monitoring
                             Excess_Alarm := FALSE;
+                            Inter_Bin_Settle_Arm := 3;
+                            Periodic_Check_Timer(IN := FALSE);
                             Status_Message := CONCAT('Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Settled below Tol — Topping up'));
                         ELSE
-                            // Settled within tolerance range: record final weight and advance to next bin
+                            // Within tolerance: lock weight and advance
                             Excess_Alarm := FALSE;
                             bin_last_weight := load_cell_value;
                             PersistentVars.Ret_bin_last_weight := bin_last_weight;
@@ -841,8 +844,48 @@ CASE Current_Step OF
                             Inter_Bin_Settle_Arm := 0;
                         END_IF;
                     END_IF;
-                END_IF;
-            END_IF;
+
+                2: // State 2: Overweight 500ms periodic monitoring
+                    FOR i := 1 TO 6 DO
+                        Auto_Bin[i] := FALSE;
+                        auto_motor_slow_trigger[i] := FALSE;
+                        auto_bin_motor[i] := FALSE;
+                    END_FOR;
+                    
+                    Periodic_Check_Timer(IN := NOT Periodic_Check_Timer.Q, PT := T#500MS);
+                    IF Periodic_Check_Timer.Q THEN
+                        IF Excess_Allowed OR (actual_bin <= max_tol_weight) THEN
+                            // Weight back in range or excess allowed -> clear alarm and restart settling delay!
+                            Excess_Alarm := FALSE;
+                            Inter_Bin_Settle_Arm := 0;
+                        ELSE
+                            Excess_Alarm := TRUE;
+                            Status_Message := CONCAT('Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Overfill! Waiting in-range / Excess'));
+                        END_IF;
+                    END_IF;
+
+                3: // State 3: Underweight 500ms periodic fine top-up monitoring
+                    Periodic_Check_Timer(IN := NOT Periodic_Check_Timer.Q, PT := T#500MS);
+                    
+                    IF (NOT Paused_By_Hold) AND GVL.Run AND (Auto_Error_Code = 0) THEN
+                        IF actual_bin < min_tol_weight THEN
+                            Auto_Bin[Settle_Hold_Step] := FALSE;
+                            auto_motor_slow_trigger[Settle_Hold_Step] := TRUE;
+                            auto_bin_motor[Settle_Hold_Step] := TRUE;
+                            Status_Message := CONCAT('Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Fine Top-up in progress'));
+                        ELSE
+                            // Reached target range -> shut off feeders and restart settling delay!
+                            Auto_Bin[Settle_Hold_Step] := FALSE;
+                            auto_motor_slow_trigger[Settle_Hold_Step] := FALSE;
+                            auto_bin_motor[Settle_Hold_Step] := FALSE;
+                            Inter_Bin_Settle_Arm := 0;
+                        END_IF;
+                    ELSE
+                        Auto_Bin[Settle_Hold_Step] := FALSE;
+                        auto_motor_slow_trigger[Settle_Hold_Step] := FALSE;
+                        auto_bin_motor[Settle_Hold_Step] := FALSE;
+                    END_IF;
+            END_CASE;
 
         ELSIF (Current_Step >= 1) AND (Current_Step <= 6) THEN
             Mat_Idx := Auto_Bin_Material_Mapping[Current_Step];
