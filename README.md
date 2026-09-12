@@ -56,18 +56,57 @@ This repository contains CODESYS project files implementing automatic and semi-a
 
 ---
 
-## Diagnostic Error Codes Reference (V14)
+## Diagnostic Error Codes Reference & Handling Logic
 
-The system aggregates configuration and runtime faults into an integer `Error_Code` and displays corresponding HMI text in `Status_Message`.
+The batching controller continuously monitors configuration validity, scale hardware, communications, and weight safety. Faults are aggregated into `Error_Code` (mirrored in `GVL.Error_Code` and `Auto_Error_Code`), and human-readable diagnostics are displayed in `Status_Message`.
 
-| Error Code | Category | HMI Message | Description | Recovery |
-| :---: | :--- | :--- | :--- | :--- |
-| **`0`** | Normal | `System Healthy` | No active error. | Normal operation. |
-| **`1`** | Configuration | `Error 1: Duplicate Material ID mapped in Auto and Semi-Auto!` | Same Material ID ($1..20$) is mapped to both Auto and Semi-Auto arrays. | Change mapping so each material ID is assigned to only one block. |
-| **`2`** | Configuration | `Error 2: Material Index configuration out of range (1..20)!` | A silo is mapped to an index $> 20$ or $< 0$. | Set mapping to `1..20` (or `0` to skip). |
-| **`3`** | Configuration | `Error 3: Recipe weight is less than (Coarse_To_Fine_Speed + Tolerance)!` | Configured target weight is smaller than feeding speed transition offsets. | Adjust recipe weight setpoint or reduce coarse-to-fine offset. |
-| **`4`** | Safety / Tare | `Error 4: Scale not zeroed (exceeds Initial Tolerance)!` | Scale gross weight exceeds `Auto_Initial_Tolerance` or `Semi_Auto_Initial_Tolerance` when starting. | Empty hopper or re-tare load cell. |
-| **`21`** | Hardware | `Error 21: Scale Overloaded (> 500 kg)!` | Live load cell weight exceeds physical safe limit of 500.0 kg. | Remove weight from hopper, inspect load cell wiring. |
+### Error Codes Summary Table (Unified Single HMI Register: GVL.Error_Code %MW76)
+
+| Error Code | Category | Type | HMI Diagnostic Message | Trigger Condition | Sequence Impact & Logic Handling | Recovery / Reset Action |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`0`** | Normal | Info | `System Healthy / Ready` | No active error | Normal execution permitted. | None. |
+| **`1`** | Configuration | Auto-clearing | `Error 1: Duplicate Material ID within Auto bins!` | Two or more Auto silos share the same Material ID ($1..20$). | Blocks Start. Evaluated continuously; auto-clears when mapping is corrected. | Assign unique Material IDs to each active Auto silo. |
+| **`2`** | Configuration | Auto-clearing | `Error 2: Auto Material Index out of range (1..20)!` | An Auto silo is assigned an ID $< 0$ or $> 20$. | Blocks Start. Outputs remain OFF. | Set mapping to valid range ($1..20$, or $0$ to skip). |
+| **`3`** | Configuration | Auto-clearing | `Error 3: Auto Target < Coarse_To_Fine + Tolerance!` | Configured target weight on Auto is smaller than feeding speed transition offsets. | Blocks Start. Prevents valve chattering and incomplete feeding. | Increase recipe target weight or reduce `Auto_Coarse_To_Fine_Speed` / `Tolerance`. |
+| **`4`** | Safety / Tare | Pre-Start Interlock | `Error 4: Auto Scale 1 not empty before Start!` | Auto Scale 1 gross weight $\ge \text{Empty\_Weight\_Limit}$ ($0.5\text{ kg}$) when Start/Next_Cycle is pressed. | Blocks cycle start; prevents tare pulse on loaded scale. | Discharge/empty Auto Scale 1 below $0.5\text{ kg}$. |
+| **`5`** | Hardware / Comms | Latching / Hold | `Error 5: Auto Scale 1 Line Fault!` | Modbus/RS485 comms loss to Auto scale 1 (`Line_Fault = TRUE`). | **Immediate Process HOLD**: All feeding valves and motors forced OFF instantly. Retains dosed weights. | Restore scale comms, then pulse `Fault_Reset` (batch resumes without data loss). |
+| **`6`** | Configuration | Auto-clearing | `Error 6: Mapping is all 0!` | All silos in Auto and Partner Semi mapping are set to $0$ (no materials assigned). | Blocks Start. Prevents running empty cycles. | Configure at least one active silo material mapping. |
+| **`7`** | Cross-Channel | Auto-clearing | `Error 7: Material ID duplicated on Auto and Semi!` | Same Material ID ($1..20$) is mapped to both Auto and Semi-Auto silos. | Blocks Start. Prevents dual-scale dispensing conflict of same ingredient. | Ensure each Material ID is assigned to either Auto or Semi-Auto, not both. |
+| **`8`** | Hardware / Comms | Latching / Hold | `Error 8: Semi Scale 2 Line Fault!` | Semi-Auto scale 2 communication lost (`Partner_Line_Fault = TRUE`). | **Immediate Process HOLD**: Feeders forced OFF to maintain batch synchronization. | Restore partner scale comms, then pulse `Fault_Reset`. |
+| **`9`** | Configuration | Auto-clearing | `Error 9: Duplicate Material ID inside Semi mapping!` | Two or more Semi-Auto silos share the same Material ID. | Blocks Start. Auto-clears when corrected. | Assign unique Material IDs across Semi-Auto silos. |
+| **`10`** | Safety / Tare | Pre-Start Interlock | `Error 10: Semi Scale 2 not empty before Start!` | Semi Scale 2 gross weight $\ge \text{Empty\_Weight\_Limit}$ ($0.5\text{ kg}$) when Start/Next_Cycle is pressed. | Blocks cycle start; prevents tare pulse on loaded scale. | Discharge/empty Semi Scale 2 below $0.5\text{ kg}$. |
+| **`11`** | Configuration | Auto-clearing | `Error 11: Semi Material Index out of range (1..20)!` | A Semi silo is assigned an ID $< 0$ or $> 20$. | Blocks Start. Outputs remain OFF. | Set Semi mapping to valid range ($1..20$, or $0$ to skip). |
+| **`12`** | Configuration | Auto-clearing | `Error 12: Semi Target < Tolerance!` | Configured target weight on Semi is smaller than allowable tolerance. | Blocks Start. Prevents improper manual dump configurations. | Increase recipe target weight or reduce `Semi_Auto_Bin_Tolerance`. |
+
+---
+
+### Logic Handling Principles in Structured Text
+
+1. **Pre-Start Configuration Validation (Codes 1, 2, 3, 6, 7, 9, 11, 12)**:
+   * Evaluated every scan before Start.
+   * If any configuration error exists, `Start_Cmd` is blocked and `Status_Message` reflects the active error.
+   * As soon as the operator corrects the HMI mapping or recipe values, the error code resets to `0` automatically.
+
+2. **Runtime Safety & Hardware Faults (Codes 4, 5, 8, 10)**:
+   * Evaluated continuously even during active dosing (Steps $1..6$ and $1..10$).
+   * Immediately deactivates all physical outputs:
+     ```st
+     IF (GVL.Error_Code > 0) THEN
+         FOR i := 1 TO 6 DO
+             Auto_Bin[i] := FALSE;
+             auto_motor_slow_trigger[i] := FALSE;
+             auto_bin_motor[i] := FALSE;
+         END_FOR;
+     END_IF;
+     ```
+   * Enters `Paused_By_Hold := TRUE` to freeze timers and sequence step progression.
+
+3. **Fault Reset vs. System Reset**:
+   * **`Fault_Reset` (Non-Destructive)**:
+     * Clears error codes when the underlying fault condition is resolved.
+     * **Does NOT abort the batch**; allows the paused dosing step to resume cleanly.
+   * **`Reset` (Production Abort)**:
+     * Full batch cancellation: resets active steps to 0, clears cycle counters, zeroes actual weights, and returns system to Idle (`Cycle_Manager_State := 0`).
 
 ---
 

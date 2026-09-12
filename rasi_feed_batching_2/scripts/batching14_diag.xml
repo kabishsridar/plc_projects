@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="Automation Builder 2.7 - Basic" productVersion="Automation Builder 2.7" creationDateTime="2026-08-29T13:40:00" />
+  <contentHeader name="Rasi_feeds_batching.project">
+    <coordinateInfo>
+      <fbd><scaling x="1" y="1" /></fbd>
+      <ld><scaling x="1" y="1" /></ld>
+      <sfc><scaling x="1" y="1" /></sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="batching14" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="Auto_Ctrl"><type><derived name="Auto_Batching_V14" /></type></variable>
+            <variable name="Semi_Auto_Ctrl"><type><derived name="Semi_Auto_Batching_V14" /></type></variable>
+            <variable name="Auto_Complete"><type><BOOL /></type></variable>
+            <variable name="Semi_Auto_Complete"><type><BOOL /></type></variable>
+            <variable name="Auto_Err"><type><INT /></type></variable>
+            <variable name="Semi_Auto_Err"><type><INT /></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <FBD>
+            <vendorElement localId="10000000000">
+              <position x="0" y="0" />
+              <alternativeText><xhtml xmlns="http://www.w3.org/1999/xhtml">FBD Implementation Attributes</xhtml></alternativeText>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/fbd/implementationattributes" handleUnknown="implementation">
+                  <fbdattributes xmlns=""><attribute name="BoxInputFlagsSupported" value="true" /></fbdattributes>
+                </data>
+              </addData>
+            </vendorElement>
+
+            <!-- Network 1: Auto_Ctrl (Auto_Batching_V14) -->
+            <block localId="1" typeName="Auto_Batching_V14" instanceName="Auto_Ctrl">
+              <position x="300" y="100" />
+              <inputVariables>
+                <variable formalParameter="Start_Button"><connectionPointIn><connection refLocalId="10" /></connectionPointIn></variable>
+                <variable formalParameter="E_Stop_Active"><connectionPointIn><connection refLocalId="11" /></connectionPointIn></variable>
+                <variable formalParameter="Reset"><connectionPointIn><connection refLocalId="12" /></connectionPointIn></variable>
+                <variable formalParameter="Auto_Bin_Material_Mapping"><connectionPointIn><connection refLocalId="13" /></connectionPointIn></variable>
+                <variable formalParameter="Auto_Coarse_To_Fine_Speed"><connectionPointIn><connection refLocalId="14" /></connectionPointIn></variable>
+                <variable formalParameter="Auto_Bin_Tolerance"><connectionPointIn><connection refLocalId="15" /></connectionPointIn></variable>
+                <variable formalParameter="Inter_Bin_Delay"><connectionPointIn><connection refLocalId="16" /></connectionPointIn></variable>
+                <variable formalParameter="Excess_Allowed"><connectionPointIn><connection refLocalId="17" /></connectionPointIn></variable>
+              </inputVariables>
+              <inOutVariables>
+                <variable formalParameter="load_cell_value"><connectionPointIn><connection refLocalId="18" /></connectionPointIn></variable>
+              </inOutVariables>
+              <outputVariables>
+                <variable formalParameter="Auto_Bin" />
+                <variable formalParameter="auto_bin_cutoff" />
+                <variable formalParameter="auto_bin_motor" />
+                <variable formalParameter="Actual_Weights" />
+                <variable formalParameter="Sequence_Complete" />
+                <variable formalParameter="Active_Material_ID" />
+                <variable formalParameter="Active_Bin_ID" />
+                <variable formalParameter="Active_Target_Weight" />
+                <variable formalParameter="Active_Live_Weight" />
+                <variable formalParameter="Current_Step" />
+                <variable formalParameter="Excess_Alarm" />
+                <variable formalParameter="Error_Code" />
+                <variable formalParameter="Status_Message" />
+              </outputVariables>
+            </block>
+            <!-- InVariables for Auto_Ctrl -->
+            <inVariable localId="10"><position x="50" y="100" /><connectionPointOut /><expression>GVL.Start_Button</expression></inVariable>
+            <inVariable localId="11"><position x="50" y="120" /><connectionPointOut /><expression>GVL.E_Stop_Active</expression></inVariable>
+            <inVariable localId="12"><position x="50" y="140" /><connectionPointOut /><expression>GVL.Reset</expression></inVariable>
+            <inVariable localId="13"><position x="50" y="160" /><connectionPointOut /><expression>GVL.Auto_Bin_Material_Mapping</expression></inVariable>
+            <inVariable localId="14"><position x="50" y="180" /><connectionPointOut /><expression>GVL.Auto_Coarse_To_Fine_Speed</expression></inVariable>
+            <inVariable localId="15"><position x="50" y="200" /><connectionPointOut /><expression>GVL.Auto_Bin_Tolerance</expression></inVariable>
+            <inVariable localId="16"><position x="50" y="220" /><connectionPointOut /><expression>GVL.Auto_Inter_Bin_Delay</expression></inVariable>
+            <inVariable localId="17"><position x="50" y="240" /><connectionPointOut /><expression>GVL.Auto_Excess_Allowed</expression></inVariable>
+            <inVariable localId="18"><position x="50" y="260" /><connectionPointOut /><expression>GVL.load_cell_auto</expression></inVariable>
+            <!-- OutVariables for Auto_Ctrl -->
+            <outVariable localId="30"><position x="650" y="100" /><connectionPointIn><connection refLocalId="1" formalParameter="Auto_Bin" /></connectionPointIn><expression>GVL.Auto_Bin</expression></outVariable>
+            <outVariable localId="31"><position x="650" y="120" /><connectionPointIn><connection refLocalId="1" formalParameter="auto_bin_cutoff" /></connectionPointIn><expression>GVL.auto_bin_cutoff</expression></outVariable>
+            <outVariable localId="32"><position x="650" y="140" /><connectionPointIn><connection refLocalId="1" formalParameter="auto_bin_motor" /></connectionPointIn><expression>GVL.auto_bin_motor</expression></outVariable>
+            <outVariable localId="33"><position x="650" y="160" /><connectionPointIn><connection refLocalId="1" formalParameter="Actual_Weights" /></connectionPointIn><expression>GVL.Auto_Weights</expression></outVariable>
+            <outVariable localId="34"><position x="650" y="180" /><connectionPointIn><connection refLocalId="1" formalParameter="Sequence_Complete" /></connectionPointIn><expression>Auto_Complete</expression></outVariable>
+            <outVariable localId="35"><position x="650" y="200" /><connectionPointIn><connection refLocalId="1" formalParameter="Active_Material_ID" /></connectionPointIn><expression>GVL.Auto_Active_Mat</expression></outVariable>
+            <outVariable localId="36"><position x="650" y="220" /><connectionPointIn><connection refLocalId="1" formalParameter="Active_Bin_ID" /></connectionPointIn><expression>GVL.Auto_Active_Bin</expression></outVariable>
+            <outVariable localId="37"><position x="650" y="240" /><connectionPointIn><connection refLocalId="1" formalParameter="Active_Target_Weight" /></connectionPointIn><expression>GVL.Auto_Active_Target_Weight</expression></outVariable>
+            <outVariable localId="38"><position x="650" y="260" /><connectionPointIn><connection refLocalId="1" formalParameter="Active_Live_Weight" /></connectionPointIn><expression>GVL.Auto_Active_Live_Weight</expression></outVariable>
+            <outVariable localId="39"><position x="650" y="280" /><connectionPointIn><connection refLocalId="1" formalParameter="Current_Step" /></connectionPointIn><expression>GVL.Auto_Current_Step</expression></outVariable>
+            <outVariable localId="40"><position x="650" y="300" /><connectionPointIn><connection refLocalId="1" formalParameter="Excess_Alarm" /></connectionPointIn><expression>GVL.Auto_Excess_Alarm</expression></outVariable>
+            <outVariable localId="41"><position x="650" y="320" /><connectionPointIn><connection refLocalId="1" formalParameter="Error_Code" /></connectionPointIn><expression>Auto_Err</expression></outVariable>
+            <outVariable localId="42"><position x="650" y="340" /><connectionPointIn><connection refLocalId="1" formalParameter="Status_Message" /></connectionPointIn><expression>GVL.Auto_Status_Message</expression></outVariable>
+
+            <!-- Network 2: Semi_Auto_Ctrl (Semi_Auto_Batching_V14) -->
+            <block localId="2" typeName="Semi_Auto_Batching_V14" instanceName="Semi_Auto_Ctrl">
+              <position x="300" y="500" />
+              <inputVariables>
+                <variable formalParameter="Start_Button"><connectionPointIn><connection refLocalId="50" /></connectionPointIn></variable>
+                <variable formalParameter="E_Stop_Active"><connectionPointIn><connection refLocalId="51" /></connectionPointIn></variable>
+                <variable formalParameter="Reset"><connectionPointIn><connection refLocalId="52" /></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Bin_Material_Mapping"><connectionPointIn><connection refLocalId="53" /></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Coarse_To_Fine_Speed"><connectionPointIn><connection refLocalId="54" /></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Bin_Tolerance"><connectionPointIn><connection refLocalId="55" /></connectionPointIn></variable>
+                <variable formalParameter="Inter_Bin_Delay"><connectionPointIn><connection refLocalId="56" /></connectionPointIn></variable>
+                <variable formalParameter="Excess_Allowed"><connectionPointIn><connection refLocalId="57" /></connectionPointIn></variable>
+              </inputVariables>
+              <inOutVariables>
+                <variable formalParameter="load_cell_value"><connectionPointIn><connection refLocalId="58" /></connectionPointIn></variable>
+              </inOutVariables>
+              <outputVariables>
+                <variable formalParameter="Semi_Auto_Bin" />
+                <variable formalParameter="semi_auto_bin_cutoff" />
+                <variable formalParameter="semi_auto_bin_motor" />
+                <variable formalParameter="Actual_Weights" />
+                <variable formalParameter="Sequence_Complete" />
+                <variable formalParameter="Active_Material_ID" />
+                <variable formalParameter="Active_Bin_ID" />
+                <variable formalParameter="Active_Target_Weight" />
+                <variable formalParameter="Active_Live_Weight" />
+                <variable formalParameter="Current_Step" />
+                <variable formalParameter="Excess_Alarm" />
+                <variable formalParameter="Error_Code" />
+                <variable formalParameter="Status_Message" />
+              </outputVariables>
+            </block>
+            <!-- InVariables for Semi_Auto_Ctrl -->
+            <inVariable localId="50"><position x="50" y="500" /><connectionPointOut /><expression>GVL.Start_Button</expression></inVariable>
+            <inVariable localId="51"><position x="50" y="520" /><connectionPointOut /><expression>GVL.E_Stop_Active</expression></inVariable>
+            <inVariable localId="52"><position x="50" y="540" /><connectionPointOut /><expression>GVL.Reset</expression></inVariable>
+            <inVariable localId="53"><position x="50" y="560" /><connectionPointOut /><expression>GVL.Semi_Auto_Bin_Material_Mapping</expression></inVariable>
+            <inVariable localId="54"><position x="50" y="580" /><connectionPointOut /><expression>GVL.Semi_Auto_Coarse_To_Fine_Speed</expression></inVariable>
+            <inVariable localId="55"><position x="50" y="600" /><connectionPointOut /><expression>GVL.Semi_Auto_Bin_Tolerance</expression></inVariable>
+            <inVariable localId="56"><position x="50" y="620" /><connectionPointOut /><expression>GVL.Semi_Auto_Inter_Bin_Delay</expression></inVariable>
+            <inVariable localId="57"><position x="50" y="640" /><connectionPointOut /><expression>GVL.Semi_Auto_Excess_Allowed</expression></inVariable>
+            <inVariable localId="58"><position x="50" y="660" /><connectionPointOut /><expression>GVL.load_cell_semi_auto</expression></inVariable>
+            <!-- OutVariables for Semi_Auto_Ctrl -->
+            <outVariable localId="70"><position x="650" y="500" /><connectionPointIn><connection refLocalId="2" formalParameter="Semi_Auto_Bin" /></connectionPointIn><expression>GVL.Semi_Auto_Bin</expression></outVariable>
+            <outVariable localId="71"><position x="650" y="520" /><connectionPointIn><connection refLocalId="2" formalParameter="semi_auto_bin_cutoff" /></connectionPointIn><expression>GVL.semi_auto_bin_cutoff</expression></outVariable>
+            <outVariable localId="72"><position x="650" y="540" /><connectionPointIn><connection refLocalId="2" formalParameter="semi_auto_bin_motor" /></connectionPointIn><expression>GVL.semi_auto_bin_motor</expression></outVariable>
+            <outVariable localId="73"><position x="650" y="560" /><connectionPointIn><connection refLocalId="2" formalParameter="Actual_Weights" /></connectionPointIn><expression>GVL.Semi_Auto_Weights</expression></outVariable>
+            <outVariable localId="74"><position x="650" y="580" /><connectionPointIn><connection refLocalId="2" formalParameter="Sequence_Complete" /></connectionPointIn><expression>Semi_Auto_Complete</expression></outVariable>
+            <outVariable localId="75"><position x="650" y="600" /><connectionPointIn><connection refLocalId="2" formalParameter="Active_Material_ID" /></connectionPointIn><expression>GVL.Semi_Auto_Active_Mat</expression></outVariable>
+            <outVariable localId="76"><position x="650" y="620" /><connectionPointIn><connection refLocalId="2" formalParameter="Active_Bin_ID" /></connectionPointIn><expression>GVL.Semi_Auto_Active_Bin</expression></outVariable>
+            <outVariable localId="77"><position x="650" y="640" /><connectionPointIn><connection refLocalId="2" formalParameter="Active_Target_Weight" /></connectionPointIn><expression>GVL.Semi_Auto_Active_Target_Weight</expression></outVariable>
+            <outVariable localId="78"><position x="650" y="660" /><connectionPointIn><connection refLocalId="2" formalParameter="Active_Live_Weight" /></connectionPointIn><expression>GVL.Semi_Auto_Active_Live_Weight</expression></outVariable>
+            <outVariable localId="79"><position x="650" y="680" /><connectionPointIn><connection refLocalId="2" formalParameter="Current_Step" /></connectionPointIn><expression>GVL.Semi_Auto_Current_Step</expression></outVariable>
+            <outVariable localId="80"><position x="650" y="700" /><connectionPointIn><connection refLocalId="2" formalParameter="Excess_Alarm" /></connectionPointIn><expression>GVL.Semi_Auto_Excess_Alarm</expression></outVariable>
+            <outVariable localId="81"><position x="650" y="720" /><connectionPointIn><connection refLocalId="2" formalParameter="Error_Code" /></connectionPointIn><expression>Semi_Auto_Err</expression></outVariable>
+            <outVariable localId="82"><position x="650" y="740" /><connectionPointIn><connection refLocalId="2" formalParameter="Status_Message" /></connectionPointIn><expression>GVL.Semi_Auto_Status_Message</expression></outVariable>
+          </FBD>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances><configurations /></instances>
+</project>

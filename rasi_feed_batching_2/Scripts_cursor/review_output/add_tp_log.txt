@@ -1,0 +1,16 @@
+Add TP to batching14
+XML: c:\Users\DELL\Desktop\RASI FOODS PROJECT04Sep2026\rasi_feed_batching_2\Scripts_cursor\batching14_with_tp.xml
+Opened project
+Existing batching14 count: 1
+Removed old batching14
+Imported batching14_with_tp.xml
+Decl has TP_ON: True
+Decl has TP_Out: True
+Decl has TP_Et: True
+Decl has TP_1: True
+Re-exported ST/XML
+Task Task calls=['batching14']
+Building...
+Build: 0 errors, 0 warnings
+Saved project
+Done.

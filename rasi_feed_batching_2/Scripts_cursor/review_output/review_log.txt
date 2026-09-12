@@ -1,0 +1,55 @@
+Rasi_feeds_batching2 - project review
+Project: c:\Users\DELL\Desktop\RASI FOODS PROJECT04Sep2026\rasi_feed_batching_2\Rasi_feeds_batching2.project
+======================================================================
+Opening project...
+Opened project OK
+
+--- PROJECT TREE (code objects) ---
+[POU/Code] GVL  type=ffbfa93a-b94d-45fc-a329-229860183b1d
+[POU/Code] Auto_Batching_V14  type=6f9dac99-8de1-4efc-8465-68ac443b7d08
+[POU/Code] Semi_Auto_Batching_V14  type=6f9dac99-8de1-4efc-8465-68ac443b7d08
+[POU/Code] batching14  type=6f9dac99-8de1-4efc-8465-68ac443b7d08
+[POU/Code] FB_Samyak_Multi  type=6f9dac99-8de1-4efc-8465-68ac443b7d08
+[POU/Code] FB_Samyak_Control  type=6f9dac99-8de1-4efc-8465-68ac443b7d08
+POU count: 6
+POUs: ['GVL', 'Auto_Batching_V14', 'Semi_Auto_Batching_V14', 'batching14', 'FB_Samyak_Multi', 'FB_Samyak_Control']
+
+--- TASK CONFIGURATION ---
+Task nodes found: 1
+Task: Task  calls=['batching14']
+
+--- GVL ---
+GVL exported -> c:\Users\DELL\Desktop\RASI FOODS PROJECT04Sep2026\rasi_feed_batching_2\Scripts_cursor\review_output\GVL.st
+GVL length (chars): 2681
+  GVL has Start_Button: True
+  GVL has E_Stop_Active: True
+  GVL has Reset: True
+  GVL has load_cell_auto: True
+  GVL has load_cell_semi_auto: True
+  GVL has Auto_Bin_Material_Mapping: True
+  GVL has Semi_Auto_Bin_Material_Mapping: True
+  GVL has Recipe_Weights: True
+  GVL has Auto_Excess_Allowed: True
+  GVL has Semi_Auto_Excess_Allowed: True
+
+--- KEY POU PRESENCE ---
+batching14: FOUND
+Auto_Batching_V14: FOUND
+Semi_Auto_Batching_V14: FOUND
+FB_Samyak_Multi: FOUND
+FB_Samyak_Control: FOUND
+GVL: FOUND
+
+--- EXPORT POUs ---
+  GVL -> ST
+  Auto_Batching_V14 -> ST
+  Semi_Auto_Batching_V14 -> ST
+  batching14 -> ST
+  FB_Samyak_Multi -> ST
+  FB_Samyak_Control -> ST
+
+--- BUILD ---
+Building: Application
+Build result: 0 Errors, 0 Warnings
+
+Review complete. Project closed.

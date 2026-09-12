@@ -1,0 +1,11 @@
+Final extracted blocks inventory (after TP add)
+======================================================================
+=== FBD BLOCKS IN batching14_fbd.xml ===
+  FB type=FB_Samyak_Multi  instance=FB_Samyak_Multi_1
+  FB type=BLINK  instance=ModEnabler
+  FB type=OR
+  FB type=AND
+  FB type=Auto_Batching_V14  instance=Auto_Ctrl
+  FB type=Semi_Auto_Batching_V14  instance=Semi_Auto_Ctrl
+  FB type=TP  instance=TP_1
+Unique FB instances: 7

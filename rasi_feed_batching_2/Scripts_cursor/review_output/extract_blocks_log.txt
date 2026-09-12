@@ -1,0 +1,15 @@
+Extract / refresh POU blocks
+Project: c:\Users\DELL\Desktop\RASI FOODS PROJECT04Sep2026\rasi_feed_batching_2\Rasi_feeds_batching2.project
+Opened project OK
+
+--- Targeted batching14.export_xml ---
+Exported: c:\Users\DELL\Desktop\RASI FOODS PROJECT04Sep2026\rasi_feed_batching_2\Scripts_cursor\review_output\st_export\batching14_fbd.xml
+  batching14 -> ST,XML
+
+--- Refresh all code POUs (ST + FBD XML when needed) ---
+  GVL -> ST,XML
+  Auto_Batching_V14 -> ST
+  Semi_Auto_Batching_V14 -> ST
+  FB_Samyak_Multi -> ST
+  FB_Samyak_Control -> ST
+Done. Project closed.
