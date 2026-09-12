@@ -6,3 +6,4 @@
 *.simulation.bootinfo_guids*
 *.simulation.compileinfo*
 *_Recovered.project
+*.~u
