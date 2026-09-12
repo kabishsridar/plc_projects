@@ -62,4 +62,6 @@ VAR_GLOBAL
 	Done_Batch_HMI: BOOL;
 	Error_bit AT %MX8.5: BOOL;
 	Fault_Reset AT %MX8.6: BOOL;
+	samyak_weight AT %MD195 : ARRAY[1..4] OF REAL;
+
 END_VAR

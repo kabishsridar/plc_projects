@@ -392,19 +392,65 @@ CASE Current_Step OF
             Active_Bin_ID := Settle_Hold_Step;
             Active_Target_Weight := Settle_Hold_Target;
             
-            IF Inter_Bin_Settle_Arm = 0 THEN
-                Inter_Bin_Timer(IN := FALSE);
-                Inter_Bin_Settle_Arm := 1;
-            ELSE
-                Inter_Bin_Timer(IN := TRUE, PT := Effective_Delay);
-                IF Inter_Bin_Timer.Q THEN
+            // If held on Excess_Alarm and Excess_Allowed is enabled, clear alarm and advance
+            IF Excess_Alarm AND Excess_Allowed THEN
+                Excess_Alarm := FALSE;
+                bin_last_weight := load_cell_value;
+                PersistentVars.Ret_Semi_bin_last_weight := bin_last_weight;
+                Current_Step := Inter_Bin_Next_Step;
+                Last_Dosing_Step := Current_Step;
+                Inter_Bin_Settling := FALSE;
+                Inter_Bin_Settle_Arm := 0;
+            ELSIF NOT Excess_Alarm THEN
+                IF Inter_Bin_Settle_Arm = 0 THEN
                     Inter_Bin_Timer(IN := FALSE);
-                    bin_last_weight := load_cell_value;
-                    PersistentVars.Ret_Semi_bin_last_weight := bin_last_weight;
-                    Current_Step := Inter_Bin_Next_Step;
-                    Last_Dosing_Step := Current_Step;
-                    Inter_Bin_Settling := FALSE;
-                    Inter_Bin_Settle_Arm := 0;
+                    Inter_Bin_Settle_Arm := 1;
+                ELSE
+                    Inter_Bin_Timer(IN := TRUE, PT := Effective_Delay);
+                    IF Inter_Bin_Timer.Q THEN
+                        Inter_Bin_Timer(IN := FALSE);
+                        
+                        // Post-settling final weight check (captures operator manual dump settling)
+                        actual_bin := load_cell_value - bin_last_weight;
+                        IF actual_bin < 0.0 THEN
+                            actual_bin := 0.0;
+                        END_IF;
+                        Actual_Weights[Settle_Hold_Step] := actual_bin;
+                        Active_Live_Weight := actual_bin;
+                        
+                        min_tol_weight := Settle_Hold_Target - Semi_Auto_Bin_Tolerance[Settle_Hold_Step];
+                        max_tol_weight := Settle_Hold_Target + Semi_Auto_Bin_Tolerance[Settle_Hold_Step];
+                        
+                        IF actual_bin > max_tol_weight THEN
+                            IF Excess_Allowed THEN
+                                Excess_Alarm := FALSE;
+                                bin_last_weight := load_cell_value;
+                                PersistentVars.Ret_Semi_bin_last_weight := bin_last_weight;
+                                Current_Step := Inter_Bin_Next_Step;
+                                Last_Dosing_Step := Current_Step;
+                                Inter_Bin_Settling := FALSE;
+                                Inter_Bin_Settle_Arm := 0;
+                            ELSE
+                                Excess_Alarm := TRUE;
+                                Status_Message := CONCAT('Semi-Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Settled Overfill Alarm!'));
+                            END_IF;
+                        ELSIF actual_bin < min_tol_weight THEN
+                            // If settled weight is below minimum tolerance, re-illuminate bin guidance lamp to top up
+                            Inter_Bin_Settling := FALSE;
+                            Inter_Bin_Settle_Arm := 0;
+                            Excess_Alarm := FALSE;
+                            Status_Message := CONCAT('Semi-Auto [Step ', CONCAT(INT_TO_STRING(Settle_Hold_Step), ']: Settled below Tol — Top up needed'));
+                        ELSE
+                            // Settled within tolerance range: record final weight and advance to next bin
+                            Excess_Alarm := FALSE;
+                            bin_last_weight := load_cell_value;
+                            PersistentVars.Ret_Semi_bin_last_weight := bin_last_weight;
+                            Current_Step := Inter_Bin_Next_Step;
+                            Last_Dosing_Step := Current_Step;
+                            Inter_Bin_Settling := FALSE;
+                            Inter_Bin_Settle_Arm := 0;
+                        END_IF;
+                    END_IF;
                 END_IF;
             END_IF;
 
