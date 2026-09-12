@@ -1,0 +1,993 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="ABB" productName="Automation Builder" productVersion="2.7" creationDateTime="2026-08-27T17:40:00"/>
+  <contentHeader name="Rasi_feeds_batching" version="1.0">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1"/>
+      </fbd>
+      <ld>
+        <scaling x="1" y="1"/>
+      </ld>
+      <sfc>
+        <scaling x="1" y="1"/>
+      </sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes/>
+    <pous>
+      <!-- 1. Auto_Batching_V14 Function Block -->
+      <pou name="Auto_Batching_V14" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Start_Button"><type><BOOL/></type></variable>
+            <variable name="E_Stop_Active"><type><BOOL/></type></variable>
+            <variable name="Reset"><type><BOOL/></type></variable>
+            <variable name="Auto_Bin_Material_Mapping"><type><array><dimension lower="1" upper="6"/><baseType><INT/></baseType></array></type></variable>
+            <variable name="Auto_Bin_Cutoff_Weights"><type><array><dimension lower="1" upper="6"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Auto_Bin_Tolerance"><type><array><dimension lower="1" upper="6"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Inter_Bin_Delay"><type><TIME/></type></variable>
+            <variable name="Excess_Allowed"><type><BOOL/></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="load_cell_value"><type><REAL/></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Auto_Bin"><type><array><dimension lower="1" upper="6"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="auto_bin_cutoff"><type><array><dimension lower="1" upper="6"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="auto_bin_motor"><type><array><dimension lower="1" upper="6"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="Actual_Weights"><type><array><dimension lower="1" upper="6"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Sequence_Complete"><type><BOOL/></type></variable>
+            <variable name="Active_Material_ID"><type><INT/></type></variable>
+            <variable name="Active_Bin_ID"><type><INT/></type></variable>
+            <variable name="Active_Target_Weight"><type><REAL/></type></variable>
+            <variable name="Active_Live_Weight"><type><REAL/></type></variable>
+            <variable name="Excess_Alarm"><type><BOOL/></type></variable>
+            <variable name="Error_Code"><type><INT/></type></variable>
+            <variable name="Status_Message"><type><string/></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="Step"><type><INT/></type></variable>
+            <variable name="bin_last_weight"><type><REAL/></type></variable>
+            <variable name="actual_bin"><type><REAL/></type></variable>
+            <variable name="target_weight"><type><REAL/></type></variable>
+            <variable name="cutoff_trigger_weight"><type><REAL/></type></variable>
+            <variable name="min_tol_weight"><type><REAL/></type></variable>
+            <variable name="max_tol_weight"><type><REAL/></type></variable>
+            <variable name="Paused_By_EStop"><type><BOOL/></type></variable>
+            <variable name="Effective_Delay"><type><TIME/></type></variable>
+            <variable name="Mat_Idx"><type><INT/></type></variable>
+            <variable name="i"><type><INT/></type></variable>
+            <variable name="Transition_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Completion_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Simulation_Mode"><type><BOOL/></type></variable>
+            <variable name="Sim_Rate"><type><REAL/></type></variable>
+            <variable name="Sim_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Start_Sim_Weight"><type><REAL/></type></variable>
+            <variable name="Discharge_Active"><type><BOOL/></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* Auto Batching FB V14 *)
+Effective_Delay := Inter_Bin_Delay;
+IF Effective_Delay = T#0S THEN
+    Effective_Delay := T#2S;
+END_IF;
+
+(* 1. HARD RESET INTERLOCK *)
+IF Reset THEN
+    FOR i := 1 TO 6 DO
+        Auto_Bin[i] := FALSE;
+        auto_bin_cutoff[i] := FALSE;
+        auto_bin_motor[i] := FALSE;
+        Actual_Weights[i] := 0.0;
+    END_FOR;
+    Sequence_Complete := FALSE;
+    Active_Material_ID := 0;
+    Active_Bin_ID := 0;
+    Active_Target_Weight := 0.0;
+    Active_Live_Weight := 0.0;
+    Excess_Alarm := FALSE;
+    Error_Code := 0;
+    Status_Message := '';
+    Paused_By_EStop := FALSE;
+    Step := 0;
+    bin_last_weight := 0.0;
+    Start_Sim_Weight := 0.0;
+    Transition_Timer(IN := FALSE);
+    Completion_Timer(IN := FALSE);
+    Sim_Timer(IN := FALSE);
+    RETURN;
+END_IF;
+
+(* 2. E-STOP PAUSE / HOLD LOGIC *)
+IF E_Stop_Active THEN
+    Paused_By_EStop := TRUE;
+END_IF;
+
+IF Paused_By_EStop THEN
+    FOR i := 1 TO 6 DO
+        Auto_Bin[i] := FALSE;
+        auto_bin_cutoff[i] := FALSE;
+        auto_bin_motor[i] := FALSE;
+    END_FOR;
+    IF E_Stop_Active THEN
+        Status_Message := 'Auto Paused: Emergency Stop Active!';
+    ELSE
+        Status_Message := 'Auto Paused: Press Start to Resume';
+        IF Start_Button THEN
+            Paused_By_EStop := FALSE;
+        END_IF;
+    END_IF;
+    Sim_Timer(IN := FALSE);
+    Transition_Timer(IN := FALSE);
+    Completion_Timer(IN := FALSE);
+    RETURN;
+END_IF;
+
+(* 3. SIMULATION WEIGHT MANAGEMENT *)
+IF Simulation_Mode THEN
+    IF Step = 0 AND NOT Start_Button AND NOT Sequence_Complete THEN
+        load_cell_value := 0.0;
+        bin_last_weight := 0.0;
+        Start_Sim_Weight := 0.0;
+        Sim_Timer(IN := FALSE);
+    END_IF;
+    Discharge_Active := FALSE;
+    IF Step &gt;= 1 AND Step &lt;= 6 THEN
+        Discharge_Active := auto_bin_motor[Step];
+    END_IF;
+    IF Discharge_Active THEN
+        Sim_Timer(IN := TRUE, PT := T#1000S);
+        load_cell_value := Start_Sim_Weight + (TIME_TO_REAL(Sim_Timer.ET) / 1000.0) * Sim_Rate;
+    ELSE
+        Sim_Timer(IN := FALSE);
+        Start_Sim_Weight := load_cell_value;
+    END_IF;
+END_IF;
+
+(* 4. RECIPE SEQUENCE START &amp; CYCLIC RESET *)
+IF Step = 0 AND Start_Button THEN
+    Step := 1;
+    bin_last_weight := load_cell_value;
+    Sequence_Complete := FALSE;
+    Excess_Alarm := FALSE;
+    Error_Code := 0;
+    Status_Message := 'Auto Pour Started';
+    Active_Target_Weight := 0.0;
+    Active_Live_Weight := 0.0;
+    FOR i := 1 TO 6 DO
+        Actual_Weights[i] := 0.0;
+        Auto_Bin[i] := FALSE;
+        auto_bin_cutoff[i] := FALSE;
+        auto_bin_motor[i] := FALSE;
+    END_FOR;
+END_IF;
+
+(* 5. SEQUENCE CONTROL STATE MACHINE *)
+CASE Step OF
+    0:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Sequence_Complete := FALSE;
+        FOR i := 1 TO 6 DO
+            Auto_Bin[i] := FALSE;
+            auto_bin_cutoff[i] := FALSE;
+            auto_bin_motor[i] := FALSE;
+        END_FOR;
+        IF Error_Code = 0 THEN Status_Message := 'Auto Idle'; END_IF;
+        
+    1..6:
+        Mat_Idx := Auto_Bin_Material_Mapping[Step];
+        IF Mat_Idx = 0 OR (Mat_Idx &lt;= 20 AND GVL.Recipe_Weights[Mat_Idx] = 0.0) THEN
+            IF Step = 6 THEN
+                Step := 7;
+            ELSE
+                Step := Step + 1;
+            END_IF;
+        ELSE
+            target_weight := GVL.Recipe_Weights[Mat_Idx];
+            cutoff_trigger_weight := target_weight - Auto_Bin_Cutoff_Weights[Step];
+            min_tol_weight := target_weight - Auto_Bin_Tolerance[Step];
+            max_tol_weight := target_weight + Auto_Bin_Tolerance[Step];
+            Active_Target_Weight := target_weight;
+            actual_bin := load_cell_value - bin_last_weight;
+            Actual_Weights[Step] := actual_bin;
+            Active_Live_Weight := actual_bin;
+            Active_Material_ID := Mat_Idx;
+            Active_Bin_ID := Step;
+            
+            IF load_cell_value &gt; 500.0 THEN
+                Error_Code := 21;
+                Status_Message := 'Error 21: Scale Overloaded!';
+                Sequence_Complete := TRUE;
+                Paused_By_EStop := TRUE;
+            END_IF;
+            
+            IF actual_bin &lt; cutoff_trigger_weight THEN
+                Auto_Bin[Step] := TRUE;
+                auto_bin_cutoff[Step] := FALSE;
+                auto_bin_motor[Step] := TRUE;
+                Excess_Alarm := FALSE;
+                Status_Message := 'Auto Pouring (Coarse Feed)';
+            ELSIF actual_bin &lt; min_tol_weight THEN
+                Auto_Bin[Step] := FALSE;
+                auto_bin_cutoff[Step] := TRUE;
+                auto_bin_motor[Step] := TRUE;
+                Excess_Alarm := FALSE;
+                Status_Message := 'Auto Pouring (Fine Feed)';
+            ELSIF actual_bin &gt; max_tol_weight THEN
+                Auto_Bin[Step] := FALSE;
+                auto_bin_cutoff[Step] := FALSE;
+                auto_bin_motor[Step] := FALSE;
+                IF Excess_Allowed THEN
+                    Excess_Alarm := FALSE;
+                    Status_Message := 'Excess Weight Allowed: Advancing';
+                    bin_last_weight := load_cell_value;
+                    Active_Target_Weight := 0.0;
+                    Active_Live_Weight := 0.0;
+                    IF Step = 6 THEN
+                        Step := 7;
+                    ELSE
+                        Step := Step + 1;
+                    END_IF;
+                ELSE
+                    Excess_Alarm := TRUE;
+                    Status_Message := 'Excess Alarm: Weight above max tolerance! Reduce weight.';
+                END_IF;
+            ELSE
+                Auto_Bin[Step] := FALSE;
+                auto_bin_cutoff[Step] := FALSE;
+                auto_bin_motor[Step] := FALSE;
+                Excess_Alarm := FALSE;
+                bin_last_weight := load_cell_value;
+                Active_Target_Weight := 0.0;
+                Active_Live_Weight := 0.0;
+                IF Step = 6 THEN
+                    Step := 7;
+                ELSE
+                    Step := Step + 1;
+                END_IF;
+            END_IF;
+        END_IF;
+
+    7:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Status_Message := 'Final Settling Delay';
+        Completion_Timer(IN := TRUE, PT := Effective_Delay);
+        IF Completion_Timer.Q THEN
+            Completion_Timer(IN := FALSE);
+            Step := 8;
+        END_IF;
+        
+    8:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Status_Message := 'Sequence Completed';
+        Sequence_Complete := TRUE;
+        IF NOT Start_Button THEN
+            Step := 0;
+            Sequence_Complete := FALSE;
+            FOR i := 1 TO 6 DO
+                Actual_Weights[i] := 0.0;
+            END_FOR;
+        END_IF;
+END_CASE;</xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <!-- 2. Semi_Auto_Batching_V14 Function Block -->
+      <pou name="Semi_Auto_Batching_V14" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Start_Button"><type><BOOL/></type></variable>
+            <variable name="E_Stop_Active"><type><BOOL/></type></variable>
+            <variable name="Reset"><type><BOOL/></type></variable>
+            <variable name="Semi_Auto_Bin_Material_Mapping"><type><array><dimension lower="1" upper="10"/><baseType><INT/></baseType></array></type></variable>
+            <variable name="Semi_Auto_Bin_Cutoff_Weights"><type><array><dimension lower="1" upper="10"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Semi_Auto_Bin_Tolerance"><type><array><dimension lower="1" upper="10"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Inter_Bin_Delay"><type><TIME/></type></variable>
+            <variable name="Excess_Allowed"><type><BOOL/></type></variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="load_cell_value"><type><REAL/></type></variable>
+          </inOutVars>
+          <outputVars>
+            <variable name="Semi_Auto_Bin"><type><array><dimension lower="1" upper="10"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="semi_auto_bin_cutoff"><type><array><dimension lower="1" upper="10"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="semi_auto_bin_motor"><type><array><dimension lower="1" upper="10"/><baseType><BOOL/></baseType></array></type></variable>
+            <variable name="Actual_Weights"><type><array><dimension lower="1" upper="10"/><baseType><REAL/></baseType></array></type></variable>
+            <variable name="Sequence_Complete"><type><BOOL/></type></variable>
+            <variable name="Active_Material_ID"><type><INT/></type></variable>
+            <variable name="Active_Bin_ID"><type><INT/></type></variable>
+            <variable name="Active_Target_Weight"><type><REAL/></type></variable>
+            <variable name="Active_Live_Weight"><type><REAL/></type></variable>
+            <variable name="Excess_Alarm"><type><BOOL/></type></variable>
+            <variable name="Error_Code"><type><INT/></type></variable>
+            <variable name="Status_Message"><type><string/></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="Step"><type><INT/></type></variable>
+            <variable name="bin_last_weight"><type><REAL/></type></variable>
+            <variable name="actual_bin"><type><REAL/></type></variable>
+            <variable name="target_weight"><type><REAL/></type></variable>
+            <variable name="cutoff_trigger_weight"><type><REAL/></type></variable>
+            <variable name="min_tol_weight"><type><REAL/></type></variable>
+            <variable name="max_tol_weight"><type><REAL/></type></variable>
+            <variable name="Paused_By_EStop"><type><BOOL/></type></variable>
+            <variable name="Effective_Delay"><type><TIME/></type></variable>
+            <variable name="Mat_Idx"><type><INT/></type></variable>
+            <variable name="i"><type><INT/></type></variable>
+            <variable name="Transition_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Completion_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Simulation_Mode"><type><BOOL/></type></variable>
+            <variable name="Sim_Rate"><type><REAL/></type></variable>
+            <variable name="Sim_Timer"><type><derived name="TON"/></type></variable>
+            <variable name="Start_Sim_Weight"><type><REAL/></type></variable>
+            <variable name="Discharge_Active"><type><BOOL/></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* Semi-Auto Batching FB V14 *)
+Effective_Delay := Inter_Bin_Delay;
+IF Effective_Delay = T#0S THEN
+    Effective_Delay := T#2S;
+END_IF;
+
+(* 1. HARD RESET INTERLOCK *)
+IF Reset THEN
+    FOR i := 1 TO 10 DO
+        Semi_Auto_Bin[i] := FALSE;
+        semi_auto_bin_cutoff[i] := FALSE;
+        semi_auto_bin_motor[i] := FALSE;
+        Actual_Weights[i] := 0.0;
+    END_FOR;
+    Sequence_Complete := FALSE;
+    Active_Material_ID := 0;
+    Active_Bin_ID := 0;
+    Active_Target_Weight := 0.0;
+    Active_Live_Weight := 0.0;
+    Excess_Alarm := FALSE;
+    Error_Code := 0;
+    Status_Message := '';
+    Paused_By_EStop := FALSE;
+    Step := 0;
+    bin_last_weight := 0.0;
+    Start_Sim_Weight := 0.0;
+    Transition_Timer(IN := FALSE);
+    Completion_Timer(IN := FALSE);
+    Sim_Timer(IN := FALSE);
+    RETURN;
+END_IF;
+
+(* 2. E-STOP PAUSE / HOLD LOGIC *)
+IF E_Stop_Active THEN
+    Paused_By_EStop := TRUE;
+END_IF;
+
+IF Paused_By_EStop THEN
+    FOR i := 1 TO 10 DO
+        Semi_Auto_Bin[i] := FALSE;
+        semi_auto_bin_cutoff[i] := FALSE;
+        semi_auto_bin_motor[i] := FALSE;
+    END_FOR;
+    IF E_Stop_Active THEN
+        Status_Message := 'Semi-Auto Paused: Emergency Stop Active!';
+    ELSE
+        Status_Message := 'Semi-Auto Paused: Press Start to Resume';
+        IF Start_Button THEN
+            Paused_By_EStop := FALSE;
+        END_IF;
+    END_IF;
+    Sim_Timer(IN := FALSE);
+    Transition_Timer(IN := FALSE);
+    Completion_Timer(IN := FALSE);
+    RETURN;
+END_IF;
+
+(* 3. SIMULATION WEIGHT MANAGEMENT *)
+IF Simulation_Mode THEN
+    IF Step = 0 AND NOT Start_Button AND NOT Sequence_Complete THEN
+        load_cell_value := 0.0;
+        bin_last_weight := 0.0;
+        Start_Sim_Weight := 0.0;
+        Sim_Timer(IN := FALSE);
+    END_IF;
+    Discharge_Active := FALSE;
+    IF Step &gt;= 1 AND Step &lt;= 10 THEN
+        Discharge_Active := semi_auto_bin_motor[Step];
+    END_IF;
+    IF Discharge_Active THEN
+        Sim_Timer(IN := TRUE, PT := T#1000S);
+        load_cell_value := Start_Sim_Weight + (TIME_TO_REAL(Sim_Timer.ET) / 1000.0) * Sim_Rate;
+    ELSE
+        Sim_Timer(IN := FALSE);
+        Start_Sim_Weight := load_cell_value;
+    END_IF;
+END_IF;
+
+(* 4. RECIPE SEQUENCE START &amp; CYCLIC RESET *)
+IF Step = 0 AND Start_Button THEN
+    Step := 1;
+    bin_last_weight := load_cell_value;
+    Sequence_Complete := FALSE;
+    Excess_Alarm := FALSE;
+    Error_Code := 0;
+    Status_Message := 'Semi-Auto Pour Started';
+    Active_Target_Weight := 0.0;
+    Active_Live_Weight := 0.0;
+    FOR i := 1 TO 10 DO
+        Actual_Weights[i] := 0.0;
+        Semi_Auto_Bin[i] := FALSE;
+        semi_auto_bin_cutoff[i] := FALSE;
+        semi_auto_bin_motor[i] := FALSE;
+    END_FOR;
+END_IF;
+
+(* 5. SEQUENCE CONTROL STATE MACHINE *)
+CASE Step OF
+    0:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Sequence_Complete := FALSE;
+        FOR i := 1 TO 10 DO
+            Semi_Auto_Bin[i] := FALSE;
+            semi_auto_bin_cutoff[i] := FALSE;
+            semi_auto_bin_motor[i] := FALSE;
+        END_FOR;
+        IF Error_Code = 0 THEN Status_Message := 'Semi-Auto Idle'; END_IF;
+        
+    1..10:
+        Mat_Idx := Semi_Auto_Bin_Material_Mapping[Step];
+        IF Mat_Idx = 0 OR (Mat_Idx &lt;= 20 AND GVL.Recipe_Weights[Mat_Idx] = 0.0) THEN
+            IF Step = 10 THEN
+                Step := 31;
+            ELSE
+                Step := Step + 1;
+            END_IF;
+        ELSE
+            target_weight := GVL.Recipe_Weights[Mat_Idx];
+            cutoff_trigger_weight := target_weight - Semi_Auto_Bin_Cutoff_Weights[Step];
+            min_tol_weight := target_weight - Semi_Auto_Bin_Tolerance[Step];
+            max_tol_weight := target_weight + Semi_Auto_Bin_Tolerance[Step];
+            Active_Target_Weight := target_weight;
+            actual_bin := load_cell_value - bin_last_weight;
+            Actual_Weights[Step] := actual_bin;
+            Active_Live_Weight := actual_bin;
+            Active_Material_ID := Mat_Idx;
+            Active_Bin_ID := Step;
+            
+            IF load_cell_value &gt; 500.0 THEN
+                Error_Code := 21;
+                Status_Message := 'Error 21: Scale Overloaded!';
+                Sequence_Complete := TRUE;
+                Paused_By_EStop := TRUE;
+            END_IF;
+            
+            IF actual_bin &lt; cutoff_trigger_weight THEN
+                Semi_Auto_Bin[Step] := TRUE;
+                semi_auto_bin_cutoff[Step] := FALSE;
+                semi_auto_bin_motor[Step] := TRUE;
+                Excess_Alarm := FALSE;
+                Status_Message := 'Semi-Auto Pouring (Coarse Feed)';
+            ELSIF actual_bin &lt; min_tol_weight THEN
+                Semi_Auto_Bin[Step] := FALSE;
+                semi_auto_bin_cutoff[Step] := TRUE;
+                semi_auto_bin_motor[Step] := TRUE;
+                Excess_Alarm := FALSE;
+                Status_Message := 'Semi-Auto Pouring (Fine Feed)';
+            ELSIF actual_bin &gt; max_tol_weight THEN
+                Semi_Auto_Bin[Step] := FALSE;
+                semi_auto_bin_cutoff[Step] := FALSE;
+                semi_auto_bin_motor[Step] := FALSE;
+                IF Excess_Allowed THEN
+                    Excess_Alarm := FALSE;
+                    Status_Message := 'Excess Weight Allowed: Advancing';
+                    bin_last_weight := load_cell_value;
+                    Active_Target_Weight := 0.0;
+                    Active_Live_Weight := 0.0;
+                    IF Step = 10 THEN
+                        Step := 31;
+                    ELSE
+                        Step := Step + 1;
+                    END_IF;
+                ELSE
+                    Excess_Alarm := TRUE;
+                    Status_Message := 'Excess Alarm: Weight above max tolerance! Reduce weight.';
+                END_IF;
+            ELSE
+                Semi_Auto_Bin[Step] := FALSE;
+                semi_auto_bin_cutoff[Step] := FALSE;
+                semi_auto_bin_motor[Step] := FALSE;
+                Excess_Alarm := FALSE;
+                bin_last_weight := load_cell_value;
+                Active_Target_Weight := 0.0;
+                Active_Live_Weight := 0.0;
+                IF Step = 10 THEN
+                    Step := 31;
+                ELSE
+                    Step := Step + 1;
+                END_IF;
+            END_IF;
+        END_IF;
+
+    31:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Status_Message := 'Final Settling Delay';
+        Completion_Timer(IN := TRUE, PT := Effective_Delay);
+        IF Completion_Timer.Q THEN
+            Completion_Timer(IN := FALSE);
+            Step := 32;
+        END_IF;
+        
+    32:
+        Active_Material_ID := 0;
+        Active_Bin_ID := 0;
+        Active_Target_Weight := 0.0;
+        Active_Live_Weight := 0.0;
+        Excess_Alarm := FALSE;
+        Status_Message := 'Sequence Completed';
+        Sequence_Complete := TRUE;
+        IF NOT Start_Button THEN
+            Step := 0;
+            Sequence_Complete := FALSE;
+            FOR i := 1 TO 10 DO
+                Actual_Weights[i] := 0.0;
+            END_FOR;
+        END_IF;
+END_CASE;</xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <!-- 3. Batch_Supervisor_V14 Function Block -->
+      <pou name="Batch_Supervisor_V14" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Start_Button"><type><BOOL/></type></variable>
+            <variable name="E_Stop_Active"><type><BOOL/></type></variable>
+            <variable name="Reset"><type><BOOL/></type></variable>
+            <variable name="Cycle_Hold_Active"><type><BOOL/></type></variable>
+            <variable name="Target_Batch_Cycles"><type><INT/></type></variable>
+            <variable name="Auto_Complete"><type><BOOL/></type></variable>
+            <variable name="Semi_Auto_Complete"><type><BOOL/></type></variable>
+            <variable name="Auto_Err"><type><INT/></type></variable>
+            <variable name="Auto_Msg"><type><string/></type></variable>
+            <variable name="Semi_Auto_Err"><type><INT/></type></variable>
+            <variable name="Semi_Auto_Msg"><type><string/></type></variable>
+            <variable name="load_cell_auto"><type><REAL/></type></variable>
+            <variable name="load_cell_semi_auto"><type><REAL/></type></variable>
+            <variable name="Auto_Initial_Tolerance"><type><REAL/></type></variable>
+            <variable name="Semi_Auto_Initial_Tolerance"><type><REAL/></type></variable>
+          </inputVars>
+          <outputVars>
+            <variable name="Internal_FB_Start"><type><BOOL/></type></variable>
+            <variable name="Run"><type><BOOL/></type></variable>
+            <variable name="Current_Batch_Cycle"><type><INT/></type></variable>
+            <variable name="Completed_Batch_Cycles"><type><INT/></type></variable>
+            <variable name="All_Cycles_Complete"><type><BOOL/></type></variable>
+            <variable name="Error_Code"><type><INT/></type></variable>
+            <variable name="Status_Message"><type><string/></type></variable>
+            <variable name="Auto_Total_Target_Weight"><type><REAL/></type></variable>
+            <variable name="Semi_Auto_Total_Target_Weight"><type><REAL/></type></variable>
+            <variable name="Auto_Material_Count"><type><INT/></type></variable>
+            <variable name="Semi_Auto_Material_Count"><type><INT/></type></variable>
+          </outputVars>
+          <localVars>
+            <variable name="Cycle_Manager_State"><type><INT/></type></variable>
+            <variable name="Duplicate_Found"><type><BOOL/></type></variable>
+            <variable name="Invalid_Material_Range"><type><BOOL/></type></variable>
+            <variable name="Weight_Limit_Error"><type><BOOL/></type></variable>
+            <variable name="i"><type><INT/></type></variable>
+            <variable name="j"><type><INT/></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">(* Batch Supervisor FB V14 *)
+Duplicate_Found := FALSE;
+Invalid_Material_Range := FALSE;
+Weight_Limit_Error := FALSE;
+
+(* Calculate Auto Total Target Weight &amp; Material Count *)
+Auto_Total_Target_Weight := 0.0;
+Auto_Material_Count := 0;
+FOR i := 1 TO 6 DO
+    IF GVL.Auto_Bin_Material_Mapping[i] &lt; 0 OR GVL.Auto_Bin_Material_Mapping[i] &gt; 20 THEN
+        Invalid_Material_Range := TRUE;
+    END_IF;
+    IF GVL.Auto_Bin_Material_Mapping[i] &lt;&gt; 0 AND GVL.Auto_Bin_Material_Mapping[i] &lt;= 20 THEN
+        FOR j := 1 TO 10 DO
+            IF GVL.Auto_Bin_Material_Mapping[i] = GVL.Semi_Auto_Bin_Material_Mapping[j] THEN
+                Duplicate_Found := TRUE;
+            END_IF;
+        END_FOR;
+    END_IF;
+    IF GVL.Auto_Bin_Material_Mapping[i] &gt; 0 AND GVL.Auto_Bin_Material_Mapping[i] &lt;= 20 THEN
+        IF GVL.Recipe_Weights[GVL.Auto_Bin_Material_Mapping[i]] &gt; 0.0 THEN
+            Auto_Total_Target_Weight := Auto_Total_Target_Weight + GVL.Recipe_Weights[GVL.Auto_Bin_Material_Mapping[i]];
+            Auto_Material_Count := Auto_Material_Count + 1;
+            IF GVL.Recipe_Weights[GVL.Auto_Bin_Material_Mapping[i]] &lt; (GVL.Auto_Bin_Cutoff_Weights[i] + GVL.Auto_Bin_Tolerance[i]) THEN
+                Weight_Limit_Error := TRUE;
+            END_IF;
+        END_IF;
+    END_IF;
+END_FOR;
+
+(* Calculate Semi-Auto Total Target Weight &amp; Material Count *)
+Semi_Auto_Total_Target_Weight := 0.0;
+Semi_Auto_Material_Count := 0;
+FOR j := 1 TO 10 DO
+    IF GVL.Semi_Auto_Bin_Material_Mapping[j] &lt; 0 OR GVL.Semi_Auto_Bin_Material_Mapping[j] &gt; 20 THEN
+        Invalid_Material_Range := TRUE;
+    END_IF;
+    IF GVL.Semi_Auto_Bin_Material_Mapping[j] &gt; 0 AND GVL.Semi_Auto_Bin_Material_Mapping[j] &lt;= 20 THEN
+        IF GVL.Recipe_Weights[GVL.Semi_Auto_Bin_Material_Mapping[j]] &gt; 0.0 THEN
+            Semi_Auto_Total_Target_Weight := Semi_Auto_Total_Target_Weight + GVL.Recipe_Weights[GVL.Semi_Auto_Bin_Material_Mapping[j]];
+            Semi_Auto_Material_Count := Semi_Auto_Material_Count + 1;
+            IF GVL.Recipe_Weights[GVL.Semi_Auto_Bin_Material_Mapping[j]] &lt; (GVL.Semi_Auto_Bin_Cutoff_Weights[j] + GVL.Semi_Auto_Bin_Tolerance[j]) THEN
+                Weight_Limit_Error := TRUE;
+            END_IF;
+        END_IF;
+    END_IF;
+END_FOR;
+
+(* Configuration Error Resolution *)
+IF Duplicate_Found THEN
+    Error_Code := 1;
+    Status_Message := 'Error 1: Duplicate Material ID mapped in Auto and Semi-Auto!';
+ELSIF Invalid_Material_Range THEN
+    Error_Code := 2;
+    Status_Message := 'Error 2: Material Index configuration out of range (1..20)!';
+ELSIF Weight_Limit_Error THEN
+    Error_Code := 3;
+    Status_Message := 'Error 3: Recipe weight is less than Cutoff + Tolerance!';
+ELSE
+    IF Error_Code &lt;= 3 THEN
+        Error_Code := 0;
+    END_IF;
+END_IF;
+
+(* Hard Reset &amp; Abort *)
+IF (Error_Code &gt;= 1 AND Error_Code &lt;= 3) OR Reset THEN
+    Internal_FB_Start := FALSE;
+    Run := FALSE;
+    All_Cycles_Complete := TRUE;
+    Cycle_Manager_State := 0;
+    GVL.Auto_Active_Target_Weight := 0.0;
+    GVL.Auto_Active_Live_Weight := 0.0;
+    GVL.Semi_Auto_Active_Target_Weight := 0.0;
+    GVL.Semi_Auto_Active_Live_Weight := 0.0;
+    FOR i := 1 TO 6 DO
+        GVL.Auto_Bin[i] := FALSE;
+        GVL.auto_bin_cutoff[i] := FALSE;
+        GVL.auto_bin_motor[i] := FALSE;
+        GVL.Auto_Weights[i] := 0.0;
+    END_FOR;
+    FOR i := 1 TO 10 DO
+        GVL.Semi_Auto_Bin[i] := FALSE;
+        GVL.semi_auto_bin_cutoff[i] := FALSE;
+        GVL.semi_auto_bin_motor[i] := FALSE;
+        GVL.Semi_Auto_Weights[i] := 0.0;
+    END_FOR;
+    IF Reset THEN
+        Error_Code := 0;
+        Current_Batch_Cycle := 0;
+        GVL.Current_Batch_Cycle := 0;
+        GVL.Target_Batch_Cycles := 0;
+        GVL.Start_Button := FALSE;
+        Completed_Batch_Cycles := 0;
+        Status_Message := 'System Reset Activated';
+        All_Cycles_Complete := FALSE;
+        GVL.Auto_Active_Mat := 0;
+        GVL.Auto_Active_Bin := 0;
+        GVL.Semi_Auto_Active_Mat := 0;
+        GVL.Semi_Auto_Active_Bin := 0;
+        GVL.Auto_Excess_Alarm := FALSE;
+        GVL.Semi_Auto_Excess_Alarm := FALSE;
+        GVL.Reset := FALSE;
+    END_IF;
+    RETURN;
+END_IF;
+
+(* Cycle Manager State Machine *)
+CASE Cycle_Manager_State OF
+    0:
+        Internal_FB_Start := FALSE;
+        All_Cycles_Complete := FALSE;
+        Run := FALSE;
+        IF Error_Code = 0 AND Status_Message &lt;&gt; 'Error: Target Batch Cycles is 0!' AND Status_Message &lt;&gt; 'Error 4: Scale weight exceeds Initial Tolerance!' THEN
+            Status_Message := 'System Ready';
+        END_IF;
+        IF Start_Button THEN
+            IF Target_Batch_Cycles &lt;= 0 THEN
+                Run := FALSE;
+                Status_Message := 'Error: Target Batch Cycles is 0!';
+            ELSIF (load_cell_auto &gt; Auto_Initial_Tolerance OR load_cell_auto &lt; (-Auto_Initial_Tolerance)) OR 
+                  (load_cell_semi_auto &gt; Semi_Auto_Initial_Tolerance OR load_cell_semi_auto &lt; (-Semi_Auto_Initial_Tolerance)) THEN
+                Run := FALSE;
+                Error_Code := 4;
+                Status_Message := 'Error 4: Scale weight exceeds Initial Tolerance!';
+            ELSE
+                Error_Code := 0;
+                Current_Batch_Cycle := 1;
+                GVL.Current_Batch_Cycle := 1;
+                Completed_Batch_Cycles := 0;
+                Run := TRUE;
+                Cycle_Manager_State := 1;
+            END_IF;
+        END_IF;
+        
+    1:
+        Internal_FB_Start := TRUE;
+        Run := TRUE;
+        Status_Message := CONCAT('Running Batch Cycle ', INT_TO_STRING(Current_Batch_Cycle));
+        IF Auto_Complete AND Semi_Auto_Complete THEN
+            Cycle_Manager_State := 2;
+        END_IF;
+        
+    2:
+        Completed_Batch_Cycles := Current_Batch_Cycle;
+        Run := TRUE;
+        IF Current_Batch_Cycle &lt; Target_Batch_Cycles AND Error_Code = 0 THEN
+            GVL.Cycle_Hold_Active := TRUE;
+            Internal_FB_Start := FALSE;
+            Cycle_Manager_State := 5;
+        ELSE
+            Cycle_Manager_State := 4;
+        END_IF;
+        
+    5:
+        Internal_FB_Start := FALSE;
+        Run := TRUE;
+        Status_Message := CONCAT('Cycle ', CONCAT(INT_TO_STRING(Current_Batch_Cycle), ' Complete. Empty scale to 0 and release Cycle Hold.'));
+        IF NOT GVL.Cycle_Hold_Active THEN
+            IF (load_cell_auto &gt; Auto_Initial_Tolerance OR load_cell_auto &lt; (-Auto_Initial_Tolerance)) OR 
+               (load_cell_semi_auto &gt; Semi_Auto_Initial_Tolerance OR load_cell_semi_auto &lt; (-Semi_Auto_Initial_Tolerance)) THEN
+                Run := FALSE;
+                Error_Code := 4;
+                Status_Message := 'Error 4: Scale weight exceeds Initial Tolerance!';
+                GVL.Cycle_Hold_Active := TRUE;
+            ELSE
+                Error_Code := 0;
+                Current_Batch_Cycle := Current_Batch_Cycle + 1;
+                GVL.Current_Batch_Cycle := Current_Batch_Cycle;
+                Cycle_Manager_State := 1;
+            END_IF;
+        END_IF;
+        
+    4:
+        Internal_FB_Start := FALSE;
+        All_Cycles_Complete := TRUE;
+        Run := FALSE;
+        GVL.Start_Button := FALSE;
+        Status_Message := 'All Batch Cycles Completed';
+        Cycle_Manager_State := 0;
+END_CASE;
+
+(* Runtime Error Mapping &amp; Aggregation *)
+IF Auto_Err &lt;&gt; 0 THEN
+    Error_Code := Auto_Err;
+    Status_Message := CONCAT('Auto Error: ', Auto_Msg);
+    Run := FALSE;
+    GVL.Start_Button := FALSE;
+ELSIF Semi_Auto_Err &lt;&gt; 0 THEN
+    Error_Code := Semi_Auto_Err;
+    Status_Message := CONCAT('Semi-Auto Error: ', Semi_Auto_Msg);
+    Run := FALSE;
+    GVL.Start_Button := FALSE;
+ELSIF Cycle_Manager_State = 0 AND Error_Code &lt;= 3 THEN
+    Error_Code := 0;
+END_IF;</xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <!-- 4. batching14 Program (FBD) -->
+      <pou name="batching14" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="Supervisor_Inst"><type><derived name="Batch_Supervisor_V14"/></type></variable>
+            <variable name="Auto_Ctrl_Inst"><type><derived name="Auto_Batching_V14"/></type></variable>
+            <variable name="Semi_Auto_Ctrl_Inst"><type><derived name="Semi_Auto_Batching_V14"/></type></variable>
+            <variable name="Auto_Complete"><type><BOOL/></type></variable>
+            <variable name="Semi_Auto_Complete"><type><BOOL/></type></variable>
+            <variable name="Auto_Err"><type><INT/></type></variable>
+            <variable name="Auto_Msg"><type><string/></type></variable>
+            <variable name="Semi_Auto_Err"><type><INT/></type></variable>
+            <variable name="Semi_Auto_Msg"><type><string/></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <FBD>
+            <!-- Network 1: Supervisor Execution -->
+            <block localId="1" typeName="Batch_Supervisor_V14" instanceName="Supervisor_Inst" executionOrderId="1">
+              <position x="10" y="10"/>
+              <inputVariables>
+                <variable formalParameter="Start_Button"><connectionPointIn><connection refLocalId="10"/></connectionPointIn></variable>
+                <variable formalParameter="E_Stop_Active"><connectionPointIn><connection refLocalId="11"/></connectionPointIn></variable>
+                <variable formalParameter="Reset"><connectionPointIn><connection refLocalId="12"/></connectionPointIn></variable>
+                <variable formalParameter="Cycle_Hold_Active"><connectionPointIn><connection refLocalId="13"/></connectionPointIn></variable>
+                <variable formalParameter="Target_Batch_Cycles"><connectionPointIn><connection refLocalId="14"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Complete"><connectionPointIn><connection refLocalId="15"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Complete"><connectionPointIn><connection refLocalId="16"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Err"><connectionPointIn><connection refLocalId="17"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Msg"><connectionPointIn><connection refLocalId="18"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Err"><connectionPointIn><connection refLocalId="19"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Msg"><connectionPointIn><connection refLocalId="20"/></connectionPointIn></variable>
+                <variable formalParameter="load_cell_auto"><connectionPointIn><connection refLocalId="21"/></connectionPointIn></variable>
+                <variable formalParameter="load_cell_semi_auto"><connectionPointIn><connection refLocalId="22"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Initial_Tolerance"><connectionPointIn><connection refLocalId="23"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Initial_Tolerance"><connectionPointIn><connection refLocalId="24"/></connectionPointIn></variable>
+              </inputVariables>
+              <outputVariables>
+                <variable formalParameter="Internal_FB_Start"/>
+                <variable formalParameter="Run"/>
+                <variable formalParameter="Current_Batch_Cycle"/>
+                <variable formalParameter="Completed_Batch_Cycles"/>
+                <variable formalParameter="All_Cycles_Complete"/>
+                <variable formalParameter="Error_Code"/>
+                <variable formalParameter="Status_Message"/>
+                <variable formalParameter="Auto_Total_Target_Weight"/>
+                <variable formalParameter="Semi_Auto_Total_Target_Weight"/>
+                <variable formalParameter="Auto_Material_Count"/>
+                <variable formalParameter="Semi_Auto_Material_Count"/>
+              </outputVariables>
+            </block>
+            <!-- InVariables for Supervisor -->
+            <inVariable localId="10"><position x="0" y="10"/><expression>GVL.Start_Button</expression></inVariable>
+            <inVariable localId="11"><position x="0" y="20"/><expression>GVL.E_Stop_Active</expression></inVariable>
+            <inVariable localId="12"><position x="0" y="30"/><expression>GVL.Reset</expression></inVariable>
+            <inVariable localId="13"><position x="0" y="40"/><expression>GVL.Cycle_Hold_Active</expression></inVariable>
+            <inVariable localId="14"><position x="0" y="50"/><expression>GVL.Target_Batch_Cycles</expression></inVariable>
+            <inVariable localId="15"><position x="0" y="60"/><expression>Auto_Complete</expression></inVariable>
+            <inVariable localId="16"><position x="0" y="70"/><expression>Semi_Auto_Complete</expression></inVariable>
+            <inVariable localId="17"><position x="0" y="80"/><expression>Auto_Err</expression></inVariable>
+            <inVariable localId="18"><position x="0" y="90"/><expression>Auto_Msg</expression></inVariable>
+            <inVariable localId="19"><position x="0" y="100"/><expression>Semi_Auto_Err</expression></inVariable>
+            <inVariable localId="20"><position x="0" y="110"/><expression>Semi_Auto_Msg</expression></inVariable>
+            <inVariable localId="21"><position x="0" y="120"/><expression>GVL.load_cell_auto</expression></inVariable>
+            <inVariable localId="22"><position x="0" y="130"/><expression>GVL.load_cell_semi_auto</expression></inVariable>
+            <inVariable localId="23"><position x="0" y="140"/><expression>GVL.Auto_Initial_Tolerance</expression></inVariable>
+            <inVariable localId="24"><position x="0" y="150"/><expression>GVL.Semi_Auto_Initial_Tolerance</expression></inVariable>
+            <!-- OutVariables for Supervisor -->
+            <outVariable localId="25"><position x="20" y="10"/><expression>GVL.Run</expression><connectionPointIn><connection refLocalId="1" formalParameter="Run"/></connectionPointIn></outVariable>
+            <outVariable localId="26"><position x="20" y="20"/><expression>GVL.Error_Code</expression><connectionPointIn><connection refLocalId="1" formalParameter="Error_Code"/></connectionPointIn></outVariable>
+            <outVariable localId="27"><position x="20" y="30"/><expression>GVL.Auto_Total_Target_Weight</expression><connectionPointIn><connection refLocalId="1" formalParameter="Auto_Total_Target_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="28"><position x="20" y="40"/><expression>GVL.Semi_Auto_Total_Target_Weight</expression><connectionPointIn><connection refLocalId="1" formalParameter="Semi_Auto_Total_Target_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="29"><position x="20" y="50"/><expression>GVL.Auto_Material_Count</expression><connectionPointIn><connection refLocalId="1" formalParameter="Auto_Material_Count"/></connectionPointIn></outVariable>
+            <outVariable localId="30"><position x="20" y="60"/><expression>GVL.Semi_Auto_Material_Count</expression><connectionPointIn><connection refLocalId="1" formalParameter="Semi_Auto_Material_Count"/></connectionPointIn></outVariable>
+
+            <!-- Network 2: Auto Batching Execution -->
+            <block localId="2" typeName="Auto_Batching_V14" instanceName="Auto_Ctrl_Inst" executionOrderId="2">
+              <position x="10" y="200"/>
+              <inputVariables>
+                <variable formalParameter="Start_Button"><connectionPointIn><connection refLocalId="1" formalParameter="Internal_FB_Start"/></connectionPointIn></variable>
+                <variable formalParameter="E_Stop_Active"><connectionPointIn><connection refLocalId="31"/></connectionPointIn></variable>
+                <variable formalParameter="Reset"><connectionPointIn><connection refLocalId="32"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Bin_Material_Mapping"><connectionPointIn><connection refLocalId="33"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Bin_Cutoff_Weights"><connectionPointIn><connection refLocalId="34"/></connectionPointIn></variable>
+                <variable formalParameter="Auto_Bin_Tolerance"><connectionPointIn><connection refLocalId="35"/></connectionPointIn></variable>
+                <variable formalParameter="Inter_Bin_Delay"><connectionPointIn><connection refLocalId="36"/></connectionPointIn></variable>
+                <variable formalParameter="Excess_Allowed"><connectionPointIn><connection refLocalId="37"/></connectionPointIn></variable>
+                <variable formalParameter="load_cell_value"><connectionPointIn><connection refLocalId="38"/></connectionPointIn></variable>
+              </inputVariables>
+              <outputVariables>
+                <variable formalParameter="Auto_Bin"/>
+                <variable formalParameter="auto_bin_cutoff"/>
+                <variable formalParameter="auto_bin_motor"/>
+                <variable formalParameter="Actual_Weights"/>
+                <variable formalParameter="Sequence_Complete"/>
+                <variable formalParameter="Active_Material_ID"/>
+                <variable formalParameter="Active_Bin_ID"/>
+                <variable formalParameter="Active_Target_Weight"/>
+                <variable formalParameter="Active_Live_Weight"/>
+                <variable formalParameter="Excess_Alarm"/>
+                <variable formalParameter="Error_Code"/>
+                <variable formalParameter="Status_Message"/>
+              </outputVariables>
+            </block>
+            <!-- InVariables for Auto_Ctrl -->
+            <inVariable localId="31"><position x="0" y="210"/><expression>GVL.E_Stop_Active</expression></inVariable>
+            <inVariable localId="32"><position x="0" y="220"/><expression>GVL.Reset</expression></inVariable>
+            <inVariable localId="33"><position x="0" y="230"/><expression>GVL.Auto_Bin_Material_Mapping</expression></inVariable>
+            <inVariable localId="34"><position x="0" y="240"/><expression>GVL.Auto_Bin_Cutoff_Weights</expression></inVariable>
+            <inVariable localId="35"><position x="0" y="250"/><expression>GVL.Auto_Bin_Tolerance</expression></inVariable>
+            <inVariable localId="36"><position x="0" y="260"/><expression>GVL.Auto_Inter_Bin_Delay</expression></inVariable>
+            <inVariable localId="37"><position x="0" y="270"/><expression>GVL.Auto_Excess_Allowed</expression></inVariable>
+            <inVariable localId="38"><position x="0" y="280"/><expression>GVL.load_cell_auto</expression></inVariable>
+            <!-- OutVariables for Auto_Ctrl -->
+            <outVariable localId="39"><position x="20" y="200"/><expression>GVL.Auto_Bin</expression><connectionPointIn><connection refLocalId="2" formalParameter="Auto_Bin"/></connectionPointIn></outVariable>
+            <outVariable localId="40"><position x="20" y="210"/><expression>GVL.auto_bin_cutoff</expression><connectionPointIn><connection refLocalId="2" formalParameter="auto_bin_cutoff"/></connectionPointIn></outVariable>
+            <outVariable localId="41"><position x="20" y="220"/><expression>GVL.auto_bin_motor</expression><connectionPointIn><connection refLocalId="2" formalParameter="auto_bin_motor"/></connectionPointIn></outVariable>
+            <outVariable localId="42"><position x="20" y="230"/><expression>GVL.Auto_Weights</expression><connectionPointIn><connection refLocalId="2" formalParameter="Actual_Weights"/></connectionPointIn></outVariable>
+            <outVariable localId="43"><position x="20" y="240"/><expression>Auto_Complete</expression><connectionPointIn><connection refLocalId="2" formalParameter="Sequence_Complete"/></connectionPointIn></outVariable>
+            <outVariable localId="44"><position x="20" y="250"/><expression>GVL.Auto_Active_Mat</expression><connectionPointIn><connection refLocalId="2" formalParameter="Active_Material_ID"/></connectionPointIn></outVariable>
+            <outVariable localId="45"><position x="20" y="260"/><expression>GVL.Auto_Active_Bin</expression><connectionPointIn><connection refLocalId="2" formalParameter="Active_Bin_ID"/></connectionPointIn></outVariable>
+            <outVariable localId="46"><position x="20" y="270"/><expression>GVL.Auto_Active_Target_Weight</expression><connectionPointIn><connection refLocalId="2" formalParameter="Active_Target_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="47"><position x="20" y="280"/><expression>GVL.Auto_Active_Live_Weight</expression><connectionPointIn><connection refLocalId="2" formalParameter="Active_Live_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="48"><position x="20" y="290"/><expression>GVL.Auto_Excess_Alarm</expression><connectionPointIn><connection refLocalId="2" formalParameter="Excess_Alarm"/></connectionPointIn></outVariable>
+            <outVariable localId="49"><position x="20" y="300"/><expression>Auto_Err</expression><connectionPointIn><connection refLocalId="2" formalParameter="Error_Code"/></connectionPointIn></outVariable>
+            <outVariable localId="50"><position x="20" y="310"/><expression>Auto_Msg</expression><connectionPointIn><connection refLocalId="2" formalParameter="Status_Message"/></connectionPointIn></outVariable>
+
+            <!-- Network 3: Semi-Auto Batching Execution -->
+            <block localId="3" typeName="Semi_Auto_Batching_V14" instanceName="Semi_Auto_Ctrl_Inst" executionOrderId="3">
+              <position x="10" y="400"/>
+              <inputVariables>
+                <variable formalParameter="Start_Button"><connectionPointIn><connection refLocalId="1" formalParameter="Internal_FB_Start"/></connectionPointIn></variable>
+                <variable formalParameter="E_Stop_Active"><connectionPointIn><connection refLocalId="51"/></connectionPointIn></variable>
+                <variable formalParameter="Reset"><connectionPointIn><connection refLocalId="52"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Bin_Material_Mapping"><connectionPointIn><connection refLocalId="53"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Bin_Cutoff_Weights"><connectionPointIn><connection refLocalId="54"/></connectionPointIn></variable>
+                <variable formalParameter="Semi_Auto_Bin_Tolerance"><connectionPointIn><connection refLocalId="55"/></connectionPointIn></variable>
+                <variable formalParameter="Inter_Bin_Delay"><connectionPointIn><connection refLocalId="56"/></connectionPointIn></variable>
+                <variable formalParameter="Excess_Allowed"><connectionPointIn><connection refLocalId="57"/></connectionPointIn></variable>
+                <variable formalParameter="load_cell_value"><connectionPointIn><connection refLocalId="58"/></connectionPointIn></variable>
+              </inputVariables>
+              <outputVariables>
+                <variable formalParameter="Semi_Auto_Bin"/>
+                <variable formalParameter="semi_auto_bin_cutoff"/>
+                <variable formalParameter="semi_auto_bin_motor"/>
+                <variable formalParameter="Actual_Weights"/>
+                <variable formalParameter="Sequence_Complete"/>
+                <variable formalParameter="Active_Material_ID"/>
+                <variable formalParameter="Active_Bin_ID"/>
+                <variable formalParameter="Active_Target_Weight"/>
+                <variable formalParameter="Active_Live_Weight"/>
+                <variable formalParameter="Excess_Alarm"/>
+                <variable formalParameter="Error_Code"/>
+                <variable formalParameter="Status_Message"/>
+              </outputVariables>
+            </block>
+            <!-- InVariables for Semi_Auto_Ctrl -->
+            <inVariable localId="51"><position x="0" y="410"/><expression>GVL.E_Stop_Active</expression></inVariable>
+            <inVariable localId="52"><position x="0" y="420"/><expression>GVL.Reset</expression></inVariable>
+            <inVariable localId="53"><position x="0" y="430"/><expression>GVL.Semi_Auto_Bin_Material_Mapping</expression></inVariable>
+            <inVariable localId="54"><position x="0" y="440"/><expression>GVL.Semi_Auto_Bin_Cutoff_Weights</expression></inVariable>
+            <inVariable localId="55"><position x="0" y="450"/><expression>GVL.Semi_Auto_Bin_Tolerance</expression></inVariable>
+            <inVariable localId="56"><position x="0" y="460"/><expression>GVL.Semi_Auto_Inter_Bin_Delay</expression></inVariable>
+            <inVariable localId="57"><position x="0" y="470"/><expression>GVL.Semi_Auto_Excess_Allowed</expression></inVariable>
+            <inVariable localId="58"><position x="0" y="480"/><expression>GVL.load_cell_semi_auto</expression></inVariable>
+            <!-- OutVariables for Semi_Auto_Ctrl -->
+            <outVariable localId="59"><position x="20" y="400"/><expression>GVL.Semi_Auto_Bin</expression><connectionPointIn><connection refLocalId="3" formalParameter="Semi_Auto_Bin"/></connectionPointIn></outVariable>
+            <outVariable localId="60"><position x="20" y="410"/><expression>GVL.semi_auto_bin_cutoff</expression><connectionPointIn><connection refLocalId="3" formalParameter="semi_auto_bin_cutoff"/></connectionPointIn></outVariable>
+            <outVariable localId="61"><position x="20" y="420"/><expression>GVL.semi_auto_bin_motor</expression><connectionPointIn><connection refLocalId="3" formalParameter="semi_auto_bin_motor"/></connectionPointIn></outVariable>
+            <outVariable localId="62"><position x="20" y="430"/><expression>GVL.Semi_Auto_Weights</expression><connectionPointIn><connection refLocalId="3" formalParameter="Actual_Weights"/></connectionPointIn></outVariable>
+            <outVariable localId="63"><position x="20" y="440"/><expression>Semi_Auto_Complete</expression><connectionPointIn><connection refLocalId="3" formalParameter="Sequence_Complete"/></connectionPointIn></outVariable>
+            <outVariable localId="64"><position x="20" y="450"/><expression>GVL.Semi_Auto_Active_Mat</expression><connectionPointIn><connection refLocalId="3" formalParameter="Active_Material_ID"/></connectionPointIn></outVariable>
+            <outVariable localId="65"><position x="20" y="460"/><expression>GVL.Semi_Auto_Active_Bin</expression><connectionPointIn><connection refLocalId="3" formalParameter="Active_Bin_ID"/></connectionPointIn></outVariable>
+            <outVariable localId="66"><position x="20" y="470"/><expression>GVL.Semi_Auto_Active_Target_Weight</expression><connectionPointIn><connection refLocalId="3" formalParameter="Active_Target_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="67"><position x="20" y="480"/><expression>GVL.Semi_Auto_Active_Live_Weight</expression><connectionPointIn><connection refLocalId="3" formalParameter="Active_Live_Weight"/></connectionPointIn></outVariable>
+            <outVariable localId="68"><position x="20" y="490"/><expression>GVL.Semi_Auto_Excess_Alarm</expression><connectionPointIn><connection refLocalId="3" formalParameter="Excess_Alarm"/></connectionPointIn></outVariable>
+            <outVariable localId="69"><position x="20" y="500"/><expression>Semi_Auto_Err</expression><connectionPointIn><connection refLocalId="3" formalParameter="Error_Code"/></connectionPointIn></outVariable>
+            <outVariable localId="70"><position x="20" y="510"/><expression>Semi_Auto_Msg</expression><connectionPointIn><connection refLocalId="3" formalParameter="Status_Message"/></connectionPointIn></outVariable>
+          </FBD>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations/>
+  </instances>
+</project>

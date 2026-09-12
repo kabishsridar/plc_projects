@@ -1,3 +1,8 @@
+(* ==========================================
+   POU: Auto_Batching_V14
+   ========================================== *)
+
+=== DECLARATION ===
 FUNCTION_BLOCK Auto_Batching_V14
 VAR_INPUT
     Start_Button : BOOL;                            // Command pulse/signal to start or resume the auto batching sequence
@@ -5,7 +10,7 @@ VAR_INPUT
     Reset : BOOL;                                   // System reset pulse (clears active steps, outputs, alarms, and error flags)
     Auto_Bin_Material_Mapping : ARRAY[1..6] OF INT; // Array mapping physical Silos 1..6 to Recipe Material IDs (1..20, 0 = Silo skipped)
     Auto_Coarse_To_Fine_Speed : ARRAY[1..6] OF REAL;// Weight offset threshold (kg) before target to transition from Coarse to Fine feeding
-    Auto_Bin_Tolerance : ARRAY[1..6] OF REAL;       // Allowable weight tolerance window (Â±kg) around target weight for each silo
+    Auto_Bin_Tolerance : ARRAY[1..6] OF REAL;       // Allowable weight tolerance window (±kg) around target weight for each silo
     Inter_Bin_Delay : TIME;                         // Settling delay duration after completing a bin before advancing to the next
     Excess_Allowed : BOOL;                          // Overfill handling policy: TRUE = proceed if target is exceeded, FALSE = raise alarm and halt
     load_cell_value : REAL;                         // Live gross weight input reading from the Auto scale load cell (kg)
@@ -76,7 +81,7 @@ VAR
     Next_Cycle_Rising : BOOL;
 END_VAR
 
-
+=== IMPLEMENTATION ===
 
 (* Auto Batching FB V14 with Full Diagnostics, Step Tracking, and Precise Status Reporting *)
 
@@ -263,9 +268,6 @@ CASE Cycle_Manager_State OF
                 Auto_All_Cycles_Complete := FALSE;
                 GVL.Run := TRUE;
                 Internal_FB_Start := TRUE;
-                Sequence_Complete := FALSE;
-                GVL.Auto_Sequence_Complete := FALSE;
-                GVL.Semi_Auto_Sequence_Complete := FALSE;
                 Cycle_Manager_State := 1;
                 Current_Step := 0;
             END_IF;
@@ -539,3 +541,4 @@ END_FOR;
 Auto_Current_Batch_Cycle := GVL.Current_Batch_Cycle;
 Auto_Completed_Batch_Cycles := GVL.Completed_Batch_Cycles;
 Auto_All_Cycles_Complete := GVL.All_Cycles_Complete;
+

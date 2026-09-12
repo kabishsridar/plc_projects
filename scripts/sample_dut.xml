@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="Automation Builder 2.7 - Basic" productVersion="Automation Builder 2.7" creationDateTime="2026-08-31T23:45:00" />
+  <contentHeader name="Rasi_feeds_batching.project">
+    <coordinateInfo><fbd><scaling x="1" y="1" /></fbd><ld><scaling x="1" y="1" /></ld><sfc><scaling x="1" y="1" /></sfc></coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes>
+      <dataType name="Modbus_Poll_Request">
+        <baseType>
+          <struct>
+            <variable name="Slave_ID"><type><BYTE /></type></variable>
+            <variable name="Func_Code"><type><BYTE /></type></variable>
+            <variable name="Start_Reg"><type><WORD /></type></variable>
+            <variable name="Num_Regs"><type><WORD /></type></variable>
+            <variable name="Raw_Data"><type><array><dimension lower="1" upper="4" /><baseType><WORD /></baseType></array></type></variable>
+            <variable name="Done"><type><BOOL /></type></variable>
+            <variable name="Error"><type><BOOL /></type></variable>
+            <variable name="Error_Code"><type><WORD /></type></variable>
+          </struct>
+        </baseType>
+      </dataType>
+    </dataTypes>
+    <pous />
+  </types>
+  <instances><configurations /></instances>
+</project>

@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="Automation Builder 2.7 - Basic" productVersion="Automation Builder 2.7" creationDateTime="2026-08-27T18:17:46.8692424" />
+  <contentHeader name="Rasi_feeds_batching.project" modificationDateTime="2026-08-27T18:17:12.3961725">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="test_fbd_pou" pouType="program">
+        <interface />
+        <body>
+          <FBD>
+            <vendorElement localId="10000000000">
+              <position x="0" y="0" />
+              <alternativeText>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">FBD Implementation Attributes</xhtml>
+              </alternativeText>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/fbd/implementationattributes" handleUnknown="implementation">
+                  <fbdattributes xmlns="">
+                    <attribute name="BoxInputFlagsSupported" value="true" />
+                  </fbdattributes>
+                </data>
+              </addData>
+            </vendorElement>
+          </FBD>
+        </body>
+        <addData />
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+</project>
